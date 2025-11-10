@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IsCoolGPT</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>IsCoolGPT</h1>
+        <p>Seu companheiro inteligente de estudos</p>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>📚 Disciplinas</h2>
+            <div id="subjectsList"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="chat-container" id="chatContainer">
+                <div class="empty-state">
+                    <h3>Bem-vindo!</h3>
+                    <p>Selecione uma disciplina e faça sua primeira pergunta.</p>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando...</p>
+            </div>
+
+            <div class="input-container">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="questionInput" 
+                        placeholder="Digite sua pergunta..."
+                        disabled
+                    >
+                    <button id="sendBtn" disabled>Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let currentSubject = null;
+        let chatHistory = [];
+
+        // Carregar disciplinas
+        async function loadSubjects() {
+            try {
+                const res = await fetch(`${API_URL}/api/subjects`);
+                const data = await res.json();
+                
+                const container = document.getElementById('subjectsList');
+                container.innerHTML = data.subjects.map(s => `
+                    <button class="subject-btn" onclick="selectSubject('${s.id}', '${s.name}')">
+                        <span>${s.icon}</span>
+                        <span>${s.name}</span>
+                    </button>
+                `).join('');
+            } catch (err) {
+                console.error('Erro ao carregar disciplinas:', err);
+            }
+        }
+
+        // Selecionar disciplina
+        function selectSubject(id, name) {
+            currentSubject = { id, name };
+            chatHistory = [];
+            
+            // Atualizar UI
+            document.querySelectorAll('.subject-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.subject-btn').classList.add('active');
+            
+            // Habilitar input
+            document.getElementById('questionInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            
+            // Limpar chat
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = `
+                <div class="message assistant">
+                    <div><strong>Assistente de ${name}</strong></div>
+                    <div>Olá! Estou aqui para ajudar com ${name}. Faça sua pergunta!</div>
+                </div>
+            `;
+        }
+
+        // Enviar mensagem
+        async function sendMessage() {
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+            
+            if (!question || !currentSubject) return;
+            
+            // Adicionar mensagem do usuário
+            addMessage(question, 'user');
+            input.value = '';
+            
+            // Mostrar loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('sendBtn').disabled = true;
+            
+            try {
+                const res = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: currentSubject.name,
+                        question: question,
+                        history: chatHistory
+                    })
+                });
+                
+                const data = await res.json();
+                
+                // Adicionar resposta
+                addMessage(data.answer, 'assistant');
+                
+                // Atualizar histórico
+                chatHistory.push(
+                    { role: 'user', content: question },
+                    { role: 'assistant', content: data.answer }
+                );
+                
+            } catch (err) {
+                addMessage('Desculpe, ocorreu um erro. Tente novamente.', 'assistant');
+                console.error('Erro:', err);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+
+        // Adicionar mensagem ao chat
+        function addMessage(text, type) {
+            const container = document.getElementById('chatContainer');
+            const time = new Date().toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `
+                <div>${text}</div>
+                <div class="timestamp">${time}</div>
+            `;
+            
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Event listeners
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('questionInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Inicializar
+        loadSubjects();
+    </script>
+</body>
+</html>
