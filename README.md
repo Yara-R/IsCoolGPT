@@ -93,9 +93,9 @@ Lista disciplinas disponíveis
 {
   "subjects": [
     {
-      "id": "matematica",
-      "name": "Matemática",
-      "icon": "📐"
+      "id": "Cloud Comp",
+      "name": "Fundamentos de Computação em Nuvem",
+      "icon": "☁️"
     }
   ]
 }
@@ -107,9 +107,9 @@ Envia pergunta ao assistente
 **Request:**
 ```json
 {
-  "subject": "Matemática",
-  "question": "Explique teorema de Pitágoras",
-  "context": "Estou no ensino médio",
+  "subject": "Fundamentos de Computação em Nuvem",
+  "question": "Explique o conceito de virtualização e sua importância para a computação em nuvem.",
+  "context": "Estou estudando infraestrutura de cloud",
   "history": []
 }
 ```
@@ -117,8 +117,8 @@ Envia pergunta ao assistente
 **Response:**
 ```json
 {
-  "answer": "O teorema de Pitágoras estabelece...",
-  "subject": "Matemática",
+  "answer": "A virtualização é a tecnologia que permite criar múltiplos ambientes virtuais independentes em um único hardware físico. Ela é fundamental para a computação em nuvem, pois possibilita o uso eficiente dos recursos, a escalabilidade e o isolamento entre aplicações.",
+  "subject": "Fundamentos de Computação em Nuvem",
   "timestamp": "2025-11-10T10:30:00"
 }
 ```
@@ -152,17 +152,6 @@ docker-compose ps
 - ✅ Nginx como reverse proxy
 
 ## 🎯 Disciplinas Suportadas
-
-- 📐 Matemática
-- ⚛️ Física
-- 🧪 Química
-- 🧬 Biologia
-- 📜 História
-- 🌍 Geografia
-- 📚 Português
-- 🗣️ Inglês
-- 💻 Programação
-- 🤔 Filosofia
 
 ## 📊 Monitoramento
 
@@ -237,7 +226,7 @@ curl http://localhost:8000/api/subjects
 curl -X POST http://localhost:8000/api/chat \
   -H "Content-Type" application/json" \
   -d '{
-    "subject": "Matemática",
+    "subject": "Matemática Computacional",
     "question": "O que é um número primo?"
   }'
 ```
