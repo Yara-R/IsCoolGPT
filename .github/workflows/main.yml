@@ -1,0 +1,34 @@
+name: CD - Deploy Production
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Login no DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build da imagem
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest .
+
+      - name: Push da imagem
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
+
+      - name: Deploy em produção
+        run: |
+          echo "Deploy em produção"
+          # Exemplo: conexão SSH
+          ssh -o StrictHostKeyChecking=no user@meu-servidor << 'EOF'
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
+            docker compose -f docker-compose.prod.yml up -d
+          EOF
