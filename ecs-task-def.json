@@ -1,0 +1,22 @@
+{
+    "family": "iscoolgpt-staging-task",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "256",
+    "memory": "512",
+    "containerDefinitions": [
+      {
+        "name": "iscoolgpt",
+        "image": "383140420454.dkr.ecr.us-east-2.amazonaws.com/iscoolgpt-staging",
+
+        "essential": true,
+        "portMappings": [
+          {
+            "containerPort": 8000,
+            "protocol": "tcp"
+          }
+        ]
+      }
+    ]
+  }
+  
