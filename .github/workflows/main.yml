@@ -24,11 +24,17 @@ jobs:
       - name: Push da imagem
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
 
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy em produção
         run: |
           echo "Deploy em produção"
-          # Exemplo: conexão SSH
-          ssh -o StrictHostKeyChecking=no user@meu-servidor << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
             docker compose -f docker-compose.prod.yml up -d
           EOF
