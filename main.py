@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import anthropic
@@ -20,6 +22,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+@app.get("/")
+def serve_index():
+    return FileResponse(os.path.join("frontend", "index.html"))
+
 
 # Cliente Anthropic
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -129,16 +138,7 @@ Mantenha suas respostas:
 async def get_subjects():
     """Retorna lista de disciplinas suportadas"""
     subjects = [
-        {"id": "matematica", "name": "Matemática", "icon": "📐"},
-        {"id": "fisica", "name": "Física", "icon": "⚛️"},
-        {"id": "quimica", "name": "Química", "icon": "🧪"},
-        {"id": "biologia", "name": "Biologia", "icon": "🧬"},
-        {"id": "historia", "name": "História", "icon": "📜"},
-        {"id": "geografia", "name": "Geografia", "icon": "🌍"},
-        {"id": "portugues", "name": "Português", "icon": "📚"},
-        {"id": "ingles", "name": "Inglês", "icon": "🗣️"},
-        {"id": "programacao", "name": "Programação", "icon": "💻"},
-        {"id": "filosofia", "name": "Filosofia", "icon": "🤔"},
+        
     ]
     return {"subjects": subjects}
 
