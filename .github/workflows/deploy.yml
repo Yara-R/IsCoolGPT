@@ -5,9 +5,9 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: us-east-1  # Substitua pela sua região
+  AWS_REGION: us-east-2
   ECR_REGISTRY: 383140420454.dkr.ecr.us-east-1.amazonaws.com
-  ECR_REPOSITORY: iscoolgpt  # ✅ ADICIONE ISSO
+  ECR_REPOSITORY: iscoolgpt
   IMAGE_TAG: latest
 
 jobs:
