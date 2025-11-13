@@ -40,11 +40,3 @@ jobs:
           service: ${{ secrets.ECS_SERVICE_STAGING }}
           cluster: ${{ secrets.ECS_CLUSTER_STAGING }}
           wait-for-service-stability: true
-```
-
-### 5. **Verificar se os arquivos de task definition existem**
-
-No seu repositório, você precisa ter:
-```
-├── ecs-task-def-prod.json    # Para produção
-└── ecs-task-def.json          # Para staging
