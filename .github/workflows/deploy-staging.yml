@@ -1,7 +1,7 @@
 name: CD - Deploy Staging
 on:
   push:
-    branches: ["main"]
+    branches: ["staging"]
 
 jobs:
   deploy-staging:
