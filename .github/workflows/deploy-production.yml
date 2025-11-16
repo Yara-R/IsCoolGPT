@@ -26,12 +26,23 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_PROD }}
-          IMAGE_TAG: latest
+          ECR_REPOSITORY: iscoolgpt
+          IMAGE_TAG: ${{ github.sha }}
         run: |
+          echo "🔨 Building image..."
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          
+          echo "🏷️  Tagging image..."
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "📤 Pushing image..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "✅ Image published:"
+          echo "   $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "   $ECR_REGISTRY/$ECR_REPOSITORY:latest"
       
       - name: Deploy no ECS (Produção)
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
@@ -41,12 +52,7 @@ jobs:
           cluster: ${{ secrets.ECS_CLUSTER_PROD }}
           wait-for-service-stability: true
       
-      - name: Merge automático para staging
-        if: github.ref == 'refs/heads/main'
+      - name: ✅ Deploy concluído
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin
-          git checkout staging
-          git merge main -m "Merge automático da main → staging após deploy de produção"
-          git push origin staging
+          echo "🎉 Deploy de produção realizado com sucesso!"
+          echo "📦 Imagem: ${{ steps.login-ecr.outputs.registry }}/iscoolgpt:${{ github.sha }}"
