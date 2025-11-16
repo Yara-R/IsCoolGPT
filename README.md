@@ -1,92 +1,210 @@
-# 🎓 Assistente Educacional IA
+# 🎓 IsCoolGPT
 
-Sistema completo de assistente educacional com FastAPI, Docker e Claude AI.
+> An intelligent educational assistant powered by AI to help students across various academic disciplines.
 
-## 🚀 Características
+[![Deploy Production](https://github.com/Yara-R/IsCoolGPT/actions/workflows/deploy-production.yml/badge.svg)](https://github.com/Yara-R/IsCoolGPT/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **Backend FastAPI**: API REST moderna e performática
-- **Frontend Responsivo**: Interface intuitiva e elegante
-- **Docker Multi-stage**: Build otimizado e seguro
-- **Claude AI**: Assistente inteligente com modelos avançados
-- **Múltiplas Disciplinas**: Suporte para 10+ matérias
-- **Histórico de Conversação**: Contexto mantido durante a sessão
+---
 
-## 📋 Pré-requisitos
+## 📋 About The Project
 
-- Docker e Docker Compose
-- Chave API da Anthropic (Claude)
-- Git
+**IsCoolGPT** is a modern educational platform that uses artificial intelligence to provide personalized support to students. The system offers didactic explanations, practical examples, and assistance across various academic disciplines.
 
-## 🔧 Instalação
+### ✨ Key Features
 
-### 1. Clone o repositório
+- 🤖 **AI Integration**: Powered by advanced language models
+- 📚 **Multiple Disciplines**: Support for 10+ academic subjects
+- 💬 **Contextual Conversations**: Maintains conversation history for more accurate responses
+- 🎨 **Modern Interface**: Responsive and intuitive design
+- 🐳 **Docker Ready**: Complete containerization with multi-stage builds
+- 🔒 **Secure**: Non-root user, health checks, and security best practices
+- ⚡ **High Performance**: FastAPI + Uvicorn with configurable workers
+- 🚀 **Complete CI/CD**: Automated deployment to AWS ECS via GitHub Actions
 
-```bash
-git clone <seu-repositorio>
-cd assistente-educacional
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│   Frontend      │
+│   (Nginx)       │
+└────────┬────────┘
+         │
+    HTTP │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│   Backend       │────▶ │    AI API        │
+│   (FastAPI)     │      │  (LLM Service)   │
+└─────────────────┘      └──────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│   AWS ECS       │
+│   (Production)  │
+└─────────────────┘
 ```
 
-### 2. Configure as variáveis de ambiente
+### 🛠️ Tech Stack
+
+**Backend:**
+- Python 3.11
+- FastAPI
+- Uvicorn (ASGI server)
+- AI SDK integration
+- Pydantic (data validation)
+
+**Frontend:**
+- HTML5 + CSS3
+- Vanilla JavaScript
+- Nginx (reverse proxy)
+
+**Infrastructure:**
+- Docker + Docker Compose
+- AWS ECR (container registry)
+- AWS ECS (container orchestration)
+- GitHub Actions (CI/CD)
+
+---
+
+## 📂 Project Structure
+
+```
+IsCoolGPT/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                    # Continuous integration
+│       ├── deploy-staging.yml        # Staging deployment
+│       └── deploy-production.yml     # Production deployment
+├── frontend/
+│   └── index.html                    # Web interface
+├── tests/
+│   ├── conftest.py                   # Pytest fixtures
+│   └── test_main.py                  # Unit tests
+├── main.py                           # FastAPI backend
+├── requirements.txt                  # Python dependencies
+├── requirements-test.txt             # Test dependencies
+├── Dockerfile                        # Multi-stage build
+├── docker-compose.yml                # Local orchestration
+├── nginx.conf                        # Nginx configuration
+├── ecs-task-def.json                # Staging task definition
+├── ecs-task-def-prod.json           # Production task definition
+├── Makefile                          # Useful commands
+├── .env.example                      # Configuration example
+└── README.md                         # This file
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- AI API Key (Anthropic)
+
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/Yara-R/IsCoolGPT.git
+cd IsCoolGPT
+```
+
+### 2️⃣ Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` e adicione sua chave API:
+Edit the `.env` file and add your API key:
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ENVIRONMENT=development
+API_HOST=0.0.0.0
+API_PORT=8000
+API_WORKERS=2
 ```
 
-### 3. Estrutura de arquivos
-
-```
-assistente-educacional/
-├── main.py                 # Backend FastAPI
-├── requirements.txt        # Dependências Python
-├── Dockerfile             # Build multi-stage
-├── docker-compose.yml     # Orquestração
-├── nginx.conf             # Configuração Nginx
-├── .env                   # Variáveis de ambiente
-├── .env.example          # Exemplo de configuração
-└── frontend/
-    └── index.html        # Interface web
-```
-
-### 4. Construir e executar
+### 3️⃣ Start with Docker Compose
 
 ```bash
-# Construir imagens
-docker-compose build
+# Build and start
+docker-compose up -d --build
 
-# Iniciar serviços
-docker-compose up -d
-
-# Ver logs
+# Check logs
 docker-compose logs -f
+
+# Check status
+docker-compose ps
 ```
 
-### 5. Acessar a aplicação
+### 4️⃣ Access the Application
 
 - **Frontend**: http://localhost
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 
-## 📡 API Endpoints
+---
 
-### GET /health
-Verifica saúde da API
+## 🧪 Local Development (Without Docker)
+
+### Install Dependencies
+
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-test.txt
+```
+
+### Run Backend
+
+```bash
+export API_KEY=your_key  # Linux/Mac
+# or
+set API_KEY=your_key  # Windows
+
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Run Frontend
+
+Open `frontend/index.html` directly in browser or use a local server:
+
+```bash
+cd frontend
+python -m http.server 8080
+```
+
+---
+
+## 📚 API Reference
+
+### Health Check
+```http
+GET /health
+```
 
 **Response:**
 ```json
 {
   "status": "healthy",
-  "timestamp": "2025-11-10T10:30:00"
+  "timestamp": "2025-11-16T10:30:00"
 }
 ```
 
-### GET /api/subjects
-Lista disciplinas disponíveis
+### List Subjects
+```http
+GET /api/subjects
+```
 
 **Response:**
 ```json
@@ -94,22 +212,30 @@ Lista disciplinas disponíveis
   "subjects": [
     {
       "id": "Cloud Comp",
-      "name": "Fundamentos de Computação em Nuvem",
+      "name": "Cloud Computing Fundamentals",
       "icon": "☁️"
+    },
+    {
+      "id": "Math",
+      "name": "Computational Mathematics",
+      "icon": "🔢"
     }
   ]
 }
 ```
 
-### POST /api/chat
-Envia pergunta ao assistente
+### Chat with Assistant
+```http
+POST /api/chat
+Content-Type: application/json
+```
 
 **Request:**
 ```json
 {
-  "subject": "Fundamentos de Computação em Nuvem",
-  "question": "Explique o conceito de virtualização e sua importância para a computação em nuvem.",
-  "context": "Estou estudando infraestrutura de cloud",
+  "subject": "Cloud Computing Fundamentals",
+  "question": "Explain the concept of virtualization",
+  "context": "I'm studying cloud infrastructure",
   "history": []
 }
 ```
@@ -117,240 +243,272 @@ Envia pergunta ao assistente
 **Response:**
 ```json
 {
-  "answer": "A virtualização é a tecnologia que permite criar múltiplos ambientes virtuais independentes em um único hardware físico. Ela é fundamental para a computação em nuvem, pois possibilita o uso eficiente dos recursos, a escalabilidade e o isolamento entre aplicações.",
-  "subject": "Fundamentos de Computação em Nuvem",
-  "timestamp": "2025-11-10T10:30:00"
+  "answer": "Virtualization is the technology that allows creating multiple independent virtual environments on a single physical hardware...",
+  "subject": "Cloud Computing Fundamentals",
+  "timestamp": "2025-11-16T10:30:00"
 }
 ```
 
-## 🐳 Comandos Docker
+---
+
+## 🧪 Testing
+
+The project has complete test coverage with pytest.
+
+### Run Tests
 
 ```bash
-# Parar serviços
-docker-compose down
-
-# Reconstruir após mudanças
-docker-compose up -d --build
-
-# Ver logs de um serviço específico
-docker-compose logs -f api
-
-# Remover tudo (incluindo volumes)
-docker-compose down -v
-
-# Verificar status
-docker-compose ps
-```
-
-## 🔒 Segurança
-
-- ✅ Multi-stage build reduz tamanho da imagem
-- ✅ Usuário não-root no container
-- ✅ Health checks configurados
-- ✅ CORS configurado adequadamente
-- ✅ Variáveis de ambiente para secrets
-- ✅ Nginx como reverse proxy
-
-## 🎯 Disciplinas Suportadas
-
-## 📊 Monitoramento
-
-### Health Check
-```bash
-curl http://localhost:8000/health
-```
-
-### Logs
-```bash
-# Todos os serviços
-docker-compose logs -f
-
-# Apenas API
-docker-compose logs -f api
-
-# Apenas Frontend
-docker-compose logs -f frontend
-```
-
-## 🛠️ Desenvolvimento
-
-### Executar localmente (sem Docker)
-
-```bash
-# Instalar dependências
-pip install -r requirements.txt
-pip install -r requirements-test.txt
-
-# Configurar variável de ambiente
-export ANTHROPIC_API_KEY=your_key
-
-# Executar API
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Abrir frontend/index.html no navegador
-```
-
-## 🧪 Testes
-
-O projeto possui cobertura completa de testes unitários e de integração.
-
-### Executar Testes
-
-```bash
-# Todos os testes
+# All tests
 make test
 
-# Testes com cobertura
+# With coverage
 make test-cov
 
-# Apenas testes unitários
+# Unit tests only
 make test-unit
 
-# Apenas testes de integração
+# Integration tests only
 make test-integration
 
-# Ver relatório de cobertura
+# View HTML report
 make coverage-report
+open htmlcov/index.html
 ```
 
-### Testes Manuais da API
+### Test Coverage
 
-```bash
-# Testar endpoint de health
-curl http://localhost:8000/health
-
-# Testar disciplinas
-curl http://localhost:8000/api/subjects
-
-# Testar chat
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type" application/json" \
-  -d '{
-    "subject": "Matemática Computacional",
-    "question": "O que é um número primo?"
-  }'
-```
-
-### Estrutura de Testes
-
-```
-tests/
-├── conftest.py           # Fixtures compartilhadas
-└── test_main.py         # Testes principais
-    ├── TestHealthEndpoints
-    ├── TestSubjectsEndpoint
-    ├── TestChatEndpoint
-    ├── TestModels
-    ├── TestCORS
-    ├── TestIntegration
-    ├── TestPerformance
-    └── TestErrorHandling
-```
-
-### Cobertura de Testes
-
-- ✅ Endpoints de health check
-- ✅ Listagem de disciplinas
-- ✅ Chat com IA (com mocks)
-- ✅ Validação de modelos Pydantic
-- ✅ Tratamento de erros
+- ✅ Endpoints (health, subjects, chat)
+- ✅ Pydantic models
 - ✅ CORS
-- ✅ Performance básica
-- ✅ Integração completa
+- ✅ Error handling
+- ✅ Performance
+- ✅ End-to-end integration
 
-Meta de cobertura: **80%+**
+**Coverage target**: 80%+
 
-## 🔄 CI/CD
+---
 
-Pipeline completo de integração e entrega contínua implementado.
+## 🔄 CI/CD Pipeline
 
-### GitHub Actions
+The project uses GitHub Actions for complete automation.
 
-O projeto inclui pipeline automatizado com:
+### Workflows
 
-1. **Testes**: Executados em Python 3.9, 3.10 e 3.11
-2. **Linting**: Flake8, Black e MyPy
-3. **Docker Build**: Validação de imagens
-4. **Security**: Varredura de vulnerabilidades
-5. **Coverage**: Upload para Codecov
+#### 1. **Continuous Integration** (`.github/workflows/ci.yml`)
+- ✅ Tests on Python 3.9, 3.10, 3.11
+- ✅ Linting (Flake8, Black, MyPy)
+- ✅ Security scanning
+- ✅ Coverage reports (Codecov)
+- ✅ Docker build validation
 
-### Comandos Make
+#### 2. **Deploy Staging** (`.github/workflows/deploy-staging.yml`)
+Trigger: push to `staging` branch
+- Build Docker image
+- Push to ECR: `iscoolgpt-staging`
+- Deploy to ECS staging
+
+#### 3. **Deploy Production** (`.github/workflows/deploy-production.yml`)
+Trigger: push to `main` branch
+- Build Docker image
+- Push to ECR: `iscoolgpt`
+- Deploy to ECS production
+
+### Environments
+
+| Environment | Branch | ECR Repository | ECS Cluster |
+|-------------|--------|----------------|-------------|
+| Staging | `staging` | `iscoolgpt-staging` | Configurable |
+| Production | `main` | `iscoolgpt` | Configurable |
+
+---
+
+## 🐳 Docker
+
+### Manual Build
 
 ```bash
-# Ver todos os comandos
+# Build
+docker build -t iscoolgpt:latest .
+
+# Run
+docker run -p 8000:8000 \
+  -e API_KEY=your_key \
+  iscoolgpt:latest
+```
+
+### Multi-stage Build
+
+The Dockerfile uses multi-stage build for optimization:
+
+1. **Base**: Base Python configuration
+2. **Dependencies**: Dependency installation
+3. **Runtime**: Minimal final image
+
+**Benefits:**
+- ✅ ~50% smaller final image
+- ✅ Non-root user for security
+- ✅ Integrated health checks
+- ✅ Optimized build cache
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `ANTHROPIC_API_KEY` | AI API Key | - | ✅ |
+| `ENVIRONMENT` | Environment (dev/prod/staging) | `production` | ❌ |
+| `API_HOST` | API host | `0.0.0.0` | ❌ |
+| `API_PORT` | API port | `8000` | ❌ |
+| `API_WORKERS` | Uvicorn workers | `2` | ❌ |
+| `LOG_LEVEL` | Log level | `info` | ❌ |
+
+### AWS Secrets (GitHub Actions)
+
+Configure in repository: **Settings → Secrets and variables → Actions**
+
+**Production:**
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `ECR_REPOSITORY_PROD`
+- `ECS_SERVICE_PROD`
+- `ECS_CLUSTER_PROD`
+
+**Staging:**
+- `ECR_REPOSITORY_STAGING`
+- `ECS_SERVICE_STAGING`
+- `ECS_CLUSTER_STAGING`
+
+---
+
+## 📊 Supported Disciplines
+
+The assistant provides support for the following disciplines:
+
+- ☁️ Cloud Computing Fundamentals
+- 🔢 Computational Mathematics
+- 💻 Programming
+- 🗄️ Databases
+- 🌐 Computer Networks
+- 🔐 Information Security
+- 📊 Data Structures
+- 🤖 Artificial Intelligence
+- 🎨 Software Design
+- 📈 Algorithm Analysis
+
+---
+
+## 🛠️ Useful Commands
+
+The project includes a `Makefile` with useful commands:
+
+```bash
+# View all available commands
 make help
 
-# Verificações completas (CI local)
+# Complete checks (simulate CI locally)
 make check
 
-# Build e deploy
+# Build and deploy locally
 make docker-build
 make docker-up
-
-# Ver logs
 make docker-logs
 
-# Limpeza
+# Tests
+make test
+make test-cov
+
+# Code quality
+make lint
+make format
+
+# Cleanup
 make clean
 ```
 
-### Pipeline Local
-
-```bash
-# Simular pipeline CI completo
-make ci
-
-# Apenas testes
-make test
-
-# Qualidade de código
-make lint
-
-# Build Docker
-make docker-build
-```
-
-## 📝 Variáveis de Ambiente
-
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `ANTHROPIC_API_KEY` | Chave API Claude | **Obrigatório** |
-| `ENVIRONMENT` | Ambiente (dev/prod) | `production` |
-| `API_HOST` | Host da API | `0.0.0.0` |
-| `API_PORT` | Porta da API | `8000` |
-| `API_WORKERS` | Workers Uvicorn | `2` |
+---
 
 ## 🐛 Troubleshooting
 
-### API não responde
-```bash
-# Verificar logs
-docker-compose logs api
+### Problem: API doesn't connect to AI service
 
-# Reiniciar serviço
-docker-compose restart api
+**Solution:**
+```bash
+# Check if API key is configured
+docker-compose exec api printenv | grep ANTHROPIC
+
+# Check logs
+docker-compose logs api
 ```
 
-### Frontend não carrega
+### Problem: Frontend doesn't load
+
+**Solution:**
 ```bash
-# Verificar Nginx
+# Check Nginx
 docker-compose logs frontend
 
-# Testar API diretamente
-curl http://localhost:8000/health
+# Check if port 80 is available
+sudo lsof -i :80
+
+# Restart service
+docker-compose restart frontend
 ```
 
-### Erro de API Key
+### Problem: Build fails
+
+**Solution:**
 ```bash
-# Verificar variável de ambiente
-docker-compose exec api printenv | grep ANTHROPIC
+# Clean Docker cache
+docker system prune -a
+
+# Build without cache
+docker-compose build --no-cache
+
+# Check dependencies
+pip install -r requirements.txt
 ```
 
-## 📚 Recursos
+---
 
-- [Documentação FastAPI](https://fastapi.tiangolo.com/)
-- [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
+## 🤝 Contributing
 
-## 📄 Licença
+Contributions are welcome! Please:
 
-MIT License
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Guidelines
+
+- Write tests for new features
+- Maintain test coverage above 80%
+- Follow the style guide (Black + Flake8)
+- Update documentation
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👥 Authors
+
+- **Yara R** - [GitHub](https://github.com/Yara-R)
+
+---
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+- 🐛 [Open an issue](https://github.com/Yara-R/IsCoolGPT/issues)
+- 💬 [Discussions](https://github.com/Yara-R/IsCoolGPT/discussions)
+- 📧 Contact via GitHub
