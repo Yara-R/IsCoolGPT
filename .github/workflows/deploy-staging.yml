@@ -1,7 +1,7 @@
 name: CD - Deploy Staging
 on:
   push:
-    branches: ["main"]
+    branches: ["staging"]
 
 jobs:
   deploy-staging:
@@ -26,12 +26,23 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_STAGING }}
-          IMAGE_TAG: latest
+          ECR_REPOSITORY: iscoolgpt-staging
+          IMAGE_TAG: ${{ github.sha }}
         run: |
+          echo "🔨 Building image..."
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          
+          echo "Tagging image..."
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "Pushing image..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "Image published:"
+          echo "   $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "   $ECR_REGISTRY/$ECR_REPOSITORY:latest"
       
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
