@@ -103,7 +103,7 @@ IsCoolGPT/
 
 - Docker 20.10+
 - Docker Compose 2.0+
-- AI API Key (Anthropic)
+- AI API Key (Gemini)
 
 ### 1️⃣ Clone the Repository
 
@@ -121,7 +121,7 @@ cp .env.example .env
 Edit the `.env` file and add your API key:
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GOOGLE_API_KEY=
 ENVIRONMENT=development
 API_HOST=0.0.0.0
 API_PORT=8000
@@ -358,7 +358,7 @@ The Dockerfile uses multi-stage build for optimization:
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `ANTHROPIC_API_KEY` | AI API Key | - | ✅ |
+| `GOOGLE_API_KEY` | AI API Key | - | ✅ |
 | `ENVIRONMENT` | Environment (dev/prod/staging) | `production` | ❌ |
 | `API_HOST` | API host | `0.0.0.0` | ❌ |
 | `API_PORT` | API port | `8000` | ❌ |
@@ -438,7 +438,7 @@ make clean
 **Solution:**
 ```bash
 # Check if API key is configured
-docker-compose exec api printenv | grep ANTHROPIC
+docker-compose exec api printenv | grep GOOGLE
 
 # Check logs
 docker-compose logs api

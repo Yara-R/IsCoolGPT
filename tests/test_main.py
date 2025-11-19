@@ -4,6 +4,8 @@ from unittest.mock import Mock, patch
 from datetime import datetime
 import sys
 import os
+from google.genai.types import Error
+from unittest.mock import patch
 
 # Adicionar path do projeto
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -316,20 +318,20 @@ class TestErrorHandling:
             headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
-    
-    @patch('main.client.messages.create')
-    def test_claude_api_timeout(self, mock_claude):
-        """Testa timeout da API Claude"""
-        import anthropic
-        mock_claude.side_effect = anthropic.APIError("Timeout")
-        
+
+
+    @patch('main.client.models.generate_content')
+    def test_gemini_api_timeout(self, mock_gemini):
+        mock_gemini.side_effect = Error("Timeout")
+
         request_data = {
             "subject": "Matemática",
             "question": "Teste timeout"
         }
-        
+
         response = client.post("/api/chat", json=request_data)
         assert response.status_code == 500
+
 
 
 if __name__ == "__main__":

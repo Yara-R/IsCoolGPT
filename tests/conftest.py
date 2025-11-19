@@ -8,11 +8,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 
 @pytest.fixture
-def mock_anthropic_response():
+def mock_response():
     """Fixture para mock de resposta do Claude"""
     mock_response = Mock()
     mock_content = Mock()
-    mock_content.text = "Esta é uma resposta mockada do Claude AI"
+    mock_content.text = "Esta é uma resposta mockada do Gemini"
     mock_response.content = [mock_content]
     return mock_response
 
@@ -45,7 +45,7 @@ def sample_chat_with_history():
 @pytest.fixture
 def mock_env_vars(monkeypatch):
     """Fixture para configurar variáveis de ambiente de teste"""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-api-key-12345")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-api-key-12345")
     monkeypatch.setenv("ENVIRONMENT", "test")
 
 

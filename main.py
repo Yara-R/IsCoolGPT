@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
-import anthropic
+from google import genai
 import os
 from datetime import datetime
 
@@ -30,8 +30,7 @@ def serve_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
 
-# Cliente Anthropic
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Models
 class Message(BaseModel):
@@ -89,8 +88,14 @@ Suas responsabilidades:
 Mantenha suas respostas:
 - Educativas e encorajadoras
 - Estruturadas e organizadas
+- Detalhadas
 - Com exemplos quando necessário
-- Focadas no aprendizado efetivo"""
+- Focadas no aprendizado efetivo
+Evite:
+- Respostas vagas ou genéricas
+- Jargões excessivos sem explicação
+- Fornecer respostas diretas sem contexto ou explicação
+"""
 
         # Construir mensagens
         messages = []
@@ -129,8 +134,8 @@ Mantenha suas respostas:
             "timestamp": datetime.now().isoformat()
         }
         
-    except anthropic.APIError as e:
-        raise HTTPException(status_code=500, detail=f"Erro na API Claude: {str(e)}")
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro na API Gemini: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
