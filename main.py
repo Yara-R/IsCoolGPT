@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from google import genai
+import google.generativeai as genai
 import os
 from datetime import datetime
 
@@ -30,7 +30,8 @@ def serve_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
 
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel('gemini-pro')
 
 # Models
 class Message(BaseModel):
@@ -119,7 +120,7 @@ Evite:
         })
         
         # Chamar Claude API
-        response = client.messages.create(
+        response = model.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
             system=system_prompt,
