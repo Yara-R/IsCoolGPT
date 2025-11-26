@@ -4,9 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 import google.generativeai as genai
 import os
-from datetime import datetime
+
+# ---------------------------
+# CONFIGURAÇÃO INICIAL
+# ---------------------------
 
 app = FastAPI(
     title="Assistente Educacional API",
@@ -14,7 +18,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configuração CORS
+# CORS liberado para frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Servir frontend estático
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
@@ -30,10 +35,18 @@ def serve_index():
     return FileResponse(os.path.join("frontend", "index.html"))
 
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel('gemini-pro')
+# ---------------------------
+# CONFIGURAR GEMINI
+# ---------------------------
 
-# Models
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+
+# ---------------------------
+# MODELOS Pydantic
+# ---------------------------
+
 class Message(BaseModel):
     role: str
     content: str
@@ -41,7 +54,6 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     subject: str
     question: str
-    context: Optional[str] = None
     history: Optional[List[Message]] = []
 
 class ChatResponse(BaseModel):
@@ -49,104 +61,68 @@ class ChatResponse(BaseModel):
     subject: str
     timestamp: str
 
-class HealthResponse(BaseModel):
-    status: str
-    timestamp: str
 
-# Endpoints
-@app.get("/", response_model=HealthResponse)
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "timestamp": datetime.now().isoformat()
-    }
-
-@app.get("/health", response_model=HealthResponse)
-async def health_check():
-    """Verifica saúde da API"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
-
-@app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """
-    Endpoint principal para interação com o assistente educacional
-    """
-    try:
-        # Construir prompt educacional
-        system_prompt = f"""Você é um assistente educacional especializado em {request.subject}.
-        
-Suas responsabilidades:
-- Explicar conceitos de forma clara e didática
-- Usar exemplos práticos e relevantes
-- Adaptar a linguagem ao nível do estudante
-- Estimular o pensamento crítico
-- Fornecer recursos adicionais quando apropriado
-
-Mantenha suas respostas:
-- Educativas e encorajadoras
-- Estruturadas e organizadas
-- Detalhadas
-- Com exemplos quando necessário
-- Focadas no aprendizado efetivo
-Evite:
-- Respostas vagas ou genéricas
-- Jargões excessivos sem explicação
-- Fornecer respostas diretas sem contexto ou explicação
-"""
-
-        # Construir mensagens
-        messages = []
-        
-        # Adicionar histórico se existir
-        if request.history:
-            for msg in request.history:
-                messages.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-        
-        # Adicionar contexto se fornecido
-        user_message = request.question
-        if request.context:
-            user_message = f"Contexto: {request.context}\n\nPergunta: {request.question}"
-        
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
-        
-        # Chamar Claude API
-        response = model.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            system=system_prompt,
-            messages=messages
-        )
-        
-        answer = response.content[0].text
-        
-        return {
-            "answer": answer,
-            "subject": request.subject,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro na API Gemini: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+# ---------------------------
+# ENDPOINT: LISTA DE DISCIPLINAS
+# ---------------------------
 
 @app.get("/api/subjects")
 async def get_subjects():
-    """Retorna lista de disciplinas suportadas"""
     subjects = [
-        
+        {"id": "intro_comp", "name": "Introdução à Computação", "icon": "💻"},
+        {"id": "prog1", "name": "Fundamentos de Programação", "icon": "👨‍💻"},
+        {"id": "logica", "name": "Lógica Matemática", "icon": "🧠"},
+        {"id": "matematica", "name": "Matemática para Computação", "icon": "📐"},
+        {"id": "poo", "name": "Programação Orientada a Objetos", "icon": "📦"},
+        {"id": "bd", "name": "Banco de Dados", "icon": "🗄️"},
+        {"id": "redes", "name": "Redes de Computadores", "icon": "🌐"},
+        {"id": "so", "name": "Sistemas Operacionais", "icon": "🖥️"},
+        {"id": "seg_info", "name": "Segurança da Informação", "icon": "🔐"},
     ]
     return {"subjects": subjects}
+
+
+# ---------------------------
+# ENDPOINT: CHAT (COM GEMINI)
+# ---------------------------
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    try:
+        subject = request.subject
+        question = request.question
+
+        prompt = f"""
+Você é um tutor especializado em {subject}.
+Responda de forma didática, com exemplos, explicando passo a passo.
+
+Pergunta do aluno:
+{question}
+"""
+
+        response = model.generate_content(prompt)
+
+        # resposta segura
+        answer = getattr(response, "text", None) or "Não foi possível gerar resposta."
+
+        return {
+            "answer": answer,
+            "subject": subject,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print("ERRO NO CHAT:", str(e))
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+
+# ---------------------------
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+# ---------------------------
 
 if __name__ == "__main__":
     import uvicorn

@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistente Educacional IA</title>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -22,79 +19,58 @@
         .header {
             background: rgba(255, 255, 255, 0.95);
             padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .header h1 {
-            color: #667eea;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             text-align: center;
-            font-size: 2rem;
-            font-weight: 700;
-        }
-
-        .header p {
-            text-align: center;
-            color: #666;
-            margin-top: 0.5rem;
         }
 
         .container {
             flex: 1;
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 2rem auto;
             padding: 0 1rem;
-            width: 100%;
             display: flex;
             gap: 1.5rem;
         }
 
         .sidebar {
+            width: 320px;
             background: white;
             border-radius: 12px;
             padding: 1.5rem;
-            width: 280px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar h2 {
-            color: #333;
-            margin-bottom: 1rem;
-            font-size: 1.2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .subject-btn {
             width: 100%;
             padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            border: 2px solid #e0e0e0;
             background: white;
             border-radius: 8px;
+            border: 2px solid #e0e0e0;
             cursor: pointer;
-            transition: all 0.3s;
+            margin-bottom: 0.5rem;
             text-align: left;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            transition: all 0.2s;
         }
 
         .subject-btn:hover {
+            background: #eef0ff;
             border-color: #667eea;
-            background: #f8f9ff;
-            transform: translateX(4px);
         }
 
         .subject-btn.active {
-            border-color: #667eea;
             background: #667eea;
             color: white;
+            border-color: #667eea;
         }
 
         .main-content {
             flex: 1;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -113,19 +89,12 @@
             padding: 1rem;
             border-radius: 12px;
             max-width: 80%;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .message.user {
             background: #667eea;
             color: white;
             align-self: flex-end;
-            margin-left: auto;
         }
 
         .message.assistant {
@@ -134,263 +103,158 @@
             align-self: flex-start;
         }
 
-        .message .timestamp {
-            font-size: 0.75rem;
-            opacity: 0.7;
-            margin-top: 0.5rem;
-        }
-
         .input-container {
-            padding: 1.5rem;
-            border-top: 1px solid #e0e0e0;
+            padding: 1rem;
             background: #fafafa;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 1rem;
+            border-top: 1px solid #e0e0e0;
         }
 
         #questionInput {
-            flex: 1;
+            width: 100%;
             padding: 1rem;
-            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        #questionInput:focus {
-            outline: none;
-            border-color: #667eea;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 0.8rem;
         }
 
         #sendBtn {
-            padding: 1rem 2rem;
+            width: 100%;
+            padding: 1rem;
             background: #667eea;
-            color: white;
             border: none;
             border-radius: 8px;
+            color: white;
+            font-weight: bold;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s;
         }
 
-        #sendBtn:hover:not(:disabled) {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        #sendBtn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 1rem;
-            color: #667eea;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            text-align: center;
-            color: #999;
-            padding: 3rem;
-        }
-
-        .empty-state h3 {
-            margin-bottom: 1rem;
-            color: #667eea;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-            }
-
-            .message {
-                max-width: 90%;
-            }
-        }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>🎓 Assistente Educacional IA</h1>
-        <p>Seu companheiro inteligente de estudos</p>
+        <p>Disciplinas da Ciência da Computação</p>
     </div>
 
     <div class="container">
+
         <div class="sidebar">
             <h2>📚 Disciplinas</h2>
             <div id="subjectsList"></div>
         </div>
 
         <div class="main-content">
-            <div class="chat-container" id="chatContainer">
-                <div class="empty-state">
-                    <h3>Bem-vindo!</h3>
-                    <p>Selecione uma disciplina e faça sua primeira pergunta.</p>
+            <div id="chatContainer" class="chat-container">
+                <div class="message assistant">
+                    <strong>Bem-vindo!</strong><br>
+                    Selecione uma disciplina e faça sua pergunta.
                 </div>
-            </div>
-            
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Processando...</p>
             </div>
 
             <div class="input-container">
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="questionInput" 
-                        placeholder="Digite sua pergunta..."
-                        disabled
-                    >
-                    <button id="sendBtn" disabled>Enviar</button>
-                </div>
+                <input type="text" id="questionInput" placeholder="Digite sua pergunta..." disabled>
+                <button id="sendBtn" disabled>Enviar</button>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = "/api";   // 🔥 CORRIGIDO
+        const API_URL = "/api/chat";
+
+        const subjects = [
+            "Introdução à Computação",
+            "Matemática para Computação",
+            "Sistemas Digitais",
+            "Fundamentos de Programação",
+            "Fundamentos de Desenvolvimento de Software",
+            "Programação Imperativa e Funcional",
+            "Lógica Matemática para Computação",
+            "Interfaces Humano Computador",
+            "Algoritmos e Estruturas de Dados",
+            "Infraestrutura de Hardware",
+            "Infraestrutura de Software (SO)",
+            "Programação Orientada a Objetos",
+            "Modelagem e Projeto de Banco de Dados",
+            "Redes e Comunicação (RSD)",
+            "Teoria da Computação",
+            "Estatística e Probabilidade",
+            "Teoria dos Grafos",
+            "Computação Paralela e Distribuída",
+            "Análise e Visualização de Dados",
+            "Aprendizado de Máquina",
+            "Sistemas Embarcados",
+            "Segurança da Informação",
+            "Análise de Algoritmos",
+            "Segurança Defensiva",
+            "Comunicação e Redes"
+        ];
 
         let currentSubject = null;
-        let chatHistory = [];
 
-        // Carregar disciplinas
-        async function loadSubjects() {
-            try {
-                const res = await fetch(`${API_URL}/subjects`);
-                const data = await res.json();
-                
-                const container = document.getElementById('subjectsList');
-                container.innerHTML = data.subjects.map(s => `
-                    <button class="subject-btn" onclick="selectSubject(event, '${s.id}', '${s.name}')">
-                        <span>${s.icon}</span>
-                        <span>${s.name}</span>
-                    </button>
-                `).join('');
-            } catch (err) {
-                console.error('Erro ao carregar disciplinas:', err);
-            }
-        }
+        function loadSubjects() {
+            const container = document.getElementById("subjectsList");
 
-        // Selecionar disciplina
-        function selectSubject(e, id, name) {
-            currentSubject = { id, name };
-            chatHistory = [];
-            
-            document.querySelectorAll('.subject-btn').forEach(btn => {
-                btn.classList.remove('active');
+            container.innerHTML = subjects
+                .map(subj => `<button class="subject-btn">${subj}</button>`)
+                .join("");
+
+            document.querySelectorAll(".subject-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll(".subject-btn").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+
+                    currentSubject = btn.textContent;
+
+                    document.getElementById("questionInput").disabled = false;
+                    document.getElementById("sendBtn").disabled = false;
+
+                    addMessage(
+                        `Estou pronto para ajudar em **${currentSubject}**!`,
+                        "assistant"
+                    );
+                });
             });
-
-            e.target.closest('.subject-btn').classList.add('active');
-            
-            document.getElementById('questionInput').disabled = false;
-            document.getElementById('sendBtn').disabled = false;
-            
-            const container = document.getElementById('chatContainer');
-            container.innerHTML = `
-                <div class="message assistant">
-                    <div><strong>Assistente de ${name}</strong></div>
-                    <div>Olá! Estou aqui para ajudar com ${name}. Faça sua pergunta!</div>
-                </div>
-            `;
         }
 
-        // Enviar mensagem
+        function addMessage(text, type) {
+            const div = document.createElement("div");
+            div.className = `message ${type}`;
+            div.innerHTML = text;
+            document.getElementById("chatContainer").appendChild(div);
+        }
+
         async function sendMessage() {
-            const input = document.getElementById('questionInput');
+            const input = document.getElementById("questionInput");
             const question = input.value.trim();
-            
             if (!question || !currentSubject) return;
-            
-            addMessage(question, 'user');
-            input.value = '';
-            
-            document.getElementById('loading').classList.add('active');
-            document.getElementById('sendBtn').disabled = true;
-            
+
+            addMessage(question, "user");
+            input.value = "";
+
             try {
-                const res = await fetch(`${API_URL}/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        subject: currentSubject.name,
+                        subject: currentSubject,
                         question: question,
-                        history: chatHistory
+                        history: []
                     })
                 });
-                
-                const data = await res.json();
-                
-                addMessage(data.answer, 'assistant');
-                
-                chatHistory.push(
-                    { role: 'user', content: question },
-                    { role: 'assistant', content: data.answer }
-                );
-                
+
+                const data = await response.json();
+
+                addMessage(data.answer, "assistant");
+
             } catch (err) {
-                addMessage('Desculpe, ocorreu um erro. Tente novamente.', 'assistant');
-                console.error('Erro:', err);
-            } finally {
-                document.getElementById('loading').classList.remove('active');
-                document.getElementById('sendBtn').disabled = false;
+                addMessage("⚠️ Erro ao conectar ao backend.", "assistant");
             }
         }
 
-        // Adicionar mensagem ao chat
-        function addMessage(text, type) {
-            const container = document.getElementById('chatContainer');
-            const time = new Date().toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            const msg = document.createElement('div');
-            msg.className = `message ${type}`;
-            msg.innerHTML = `
-                <div>${text}</div>
-                <div class="timestamp">${time}</div>
-            `;
-            
-            container.appendChild(msg);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // Event listeners
-        document.getElementById('sendBtn').addEventListener('click', sendMessage);
-        document.getElementById('questionInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        document.getElementById("sendBtn").addEventListener("click", sendMessage);
+        document.getElementById("questionInput").addEventListener("keypress", e => {
+            if (e.key === "Enter") sendMessage();
         });
 
         loadSubjects();
