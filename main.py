@@ -93,12 +93,21 @@ async def chat(request: ChatRequest):
         question = request.question
 
         prompt = f"""
-Você é um tutor especializado em {subject}.
-Responda de forma didática, com exemplos, explicando passo a passo.
-
+Você é um coach de estudos para concursos especializado em {subject}. Responda em Português com foco em correção e objetividade:
+- Dê a solução direta (código/comando/algoritmo se aplicável).
+- Explique linha a linha ou etapa a etapa.
+- Destaque a alternativa correta (se houver alternativas) e explique por que as outras estão erradas.
+- Liste formulações de questões semelhantes para praticar.
+- A ponte erros comuns e como evitá-los.
+- seja claro e detalhado. 
+- Ajude o aluno a entender profundamente o assunto.
+- Use exemplos práticos quando possível.
+- Mantenha a resposta organizada com tópicos e subtópicos.
+- Forneça dicas de estudo adicionais relacionadas ao tema.
 Pergunta do aluno:
 {question}
 """
+
 
         response = model.generate_content(prompt)
 
