@@ -40,7 +40,7 @@ def serve_index():
 # ---------------------------
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 
 # ---------------------------
@@ -93,22 +93,12 @@ async def chat(request: ChatRequest):
         question = request.question
 
         prompt = f"""
-Você é um coach de estudos para concursos especializado em {subject}. Responda com foco em em explicar da melhor maneira, correção de erros teóricos e práticos e objetividade:
-- Dê a solução direta (código/comando/algoritmo se aplicável).
-- Explique linha a linha ou etapa a etapa.
-- Destaque a alternativa correta (se houver alternativas) e explique por que as outras estão erradas.
-- Liste formulações de questões semelhantes para praticar.
-- A ponte erros comuns e como evitá-los.
-- seja claro e detalhado. 
-- Ajude o aluno a entender profundamente o assunto.
-- Use exemplos práticos quando possível.
-- Mantenha a resposta organizada com tópicos e subtópicos.
-- Forneça dicas de estudo adicionais relacionadas ao tema.
+Você é um tutor especializado em {subject}.
+Responda de forma didática, com exemplos, explicando passo a passo.
 
 Pergunta do aluno:
 {question}
 """
-
 
         response = model.generate_content(prompt)
 
