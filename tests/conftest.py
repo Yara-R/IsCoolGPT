@@ -8,16 +8,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 
 @pytest.fixture
-def mock_response():
-    """Fixture para mock de resposta do Claude"""
-    mock_response = Mock()
-    mock_content = Mock()
-    mock_content.text = "Esta é uma resposta mockada do Gemini"
-    mock_response.content = [mock_content]
-    return mock_response
-
-
-@pytest.fixture
 def sample_chat_request():
     """Fixture com request de chat padrão"""
     return {
@@ -27,19 +17,6 @@ def sample_chat_request():
         "history": []
     }
 
-
-@pytest.fixture
-def sample_chat_with_history():
-    """Fixture com request incluindo histórico"""
-    return {
-        "subject": "Física",
-        "question": "E sobre velocidade?",
-        "context": "Estou estudando cinemática",
-        "history": [
-            {"role": "user", "content": "O que é movimento?"},
-            {"role": "assistant", "content": "Movimento é a mudança de posição..."}
-        ]
-    }
 
 
 @pytest.fixture
