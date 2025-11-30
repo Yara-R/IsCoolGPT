@@ -27,4 +27,4 @@ jobs:
 
       - name: Rodar testes
         run: |
-          pytest --maxfail=1 --disable-warnings -q
+          make test
