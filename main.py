@@ -1,25 +1,132 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
-from google import genai
+import google.generativeai as genai
+import os
 
-app = FastAPI()
+# ---------------------------
+# CONFIGURAÇÃO INICIAL
+# ---------------------------
 
-# Inicialização segura do cliente
-try:
-    client = genai.Client()
-    model = client.GenerativeModel("gemini-2.5-flash")
-except Exception:
-    model = None
+app = FastAPI(
+    title="Assistente Educacional API",
+    description="API para assistente educacional com IA",
+    version="1.0.0"
+)
+
+# CORS liberado para frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Servir frontend estático
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+@app.get("/")
+def serve_index():
+    return FileResponse(os.path.join("frontend", "index.html"))
 
 
-class QuestionRequest(BaseModel):
+# ---------------------------
+# CONFIGURAR GEMINI
+# ---------------------------
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("gemini-2.5-flash")
+
+
+# ---------------------------
+# MODELOS Pydantic
+# ---------------------------
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
     subject: str
     question: str
-    context: str | None = ""
-    history: list | None = []
+    history: Optional[List[Message]] = []
+
+class ChatResponse(BaseModel):
+    answer: str
+    subject: str
+    timestamp: str
 
 
+# ---------------------------
+# ENDPOINT: LISTA DE DISCIPLINAS
+# ---------------------------
+
+@app.get("/api/subjects")
+async def get_subjects():
+    subjects = [
+        {"id": "intro_comp", "name": "Introdução à Computação", "icon": "💻"},
+        {"id": "prog1", "name": "Fundamentos de Programação", "icon": "👨‍💻"},
+        {"id": "logica", "name": "Lógica Matemática", "icon": "🧠"},
+        {"id": "matematica", "name": "Matemática para Computação", "icon": "📐"},
+        {"id": "poo", "name": "Programação Orientada a Objetos", "icon": "📦"},
+        {"id": "bd", "name": "Banco de Dados", "icon": "🗄️"},
+        {"id": "redes", "name": "Redes de Computadores", "icon": "🌐"},
+        {"id": "so", "name": "Sistemas Operacionais", "icon": "🖥️"},
+        {"id": "seg_info", "name": "Segurança da Informação", "icon": "🔐"},
+    ]
+    return {"subjects": subjects}
+
+
+# ---------------------------
+# ENDPOINT: CHAT (COM GEMINI)
+# ---------------------------
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    try:
+        subject = request.subject
+        question = request.question
+
+        prompt = f"""
+Você é um coach de estudos para concursos especializado em {subject}. Responda com foco em em explicar da melhor maneira, correção de erros teóricos e práticos e objetividade:
+- Dê a solução direta (código/comando/algoritmo se aplicável).
+- Explique linha a linha ou etapa a etapa.
+- Destaque a alternativa correta (se houver alternativas) e explique por que as outras estão erradas.
+- Liste formulações de questões semelhantes para praticar.
+- A ponte erros comuns e como evitá-los.
+- seja claro e detalhado. 
+- Ajude o aluno a entender profundamente o assunto.
+- Use exemplos práticos quando possível.
+- Mantenha a resposta organizada com tópicos e subtópicos.
+- Forneça dicas de estudo adicionais relacionadas ao tema.
+
+Pergunta do aluno:
+{question}
+"""
+
+
+        response = model.generate_content(prompt)
+
+        # resposta segura
+        answer = getattr(response, "text", None) or "Não foi possível gerar resposta."
+
+        return {
+            "answer": answer,
+            "subject": subject,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print("ERRO NO CHAT:", str(e))
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+
+# ---------------------------
 @app.get("/health")
 def health():
     return {
@@ -27,30 +134,8 @@ def health():
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
+# ---------------------------
 
-@app.post("/api/chat")
-def chat(request: QuestionRequest):
-    if not model:
-        raise HTTPException(status_code=503, detail="Modelo indisponível no momento.")
-
-    prompt = f"""
-Você é um tutor especializado em {request.subject}.
-Responda de forma didática, com exemplos, explicando passo a passo.
-
-Pergunta do aluno:
-{request.question}
-
-Contexto adicional:
-{request.context}
-"""
-
-    try:
-        response = model.generate_content(prompt)
-        answer = getattr(response, "text", None)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno: {e}")
-
-    if not answer:
-        raise HTTPException(status_code=500, detail="Falha ao gerar resposta.")
-
-    return {"answer": answer}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
