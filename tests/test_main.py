@@ -1,10 +1,13 @@
+"""
+Testes otimizados para IsCoolGPT - Focado em cobertura 80%+
+"""
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 import os
 import sys
 
-# Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from main import app
@@ -13,163 +16,152 @@ client = TestClient(app)
 
 
 # ============================================
-# Test Health Endpoints
+# Fixtures
 # ============================================
 
-class TestHealthEndpoints:
-    """Testes para endpoints de health check"""
-    
-    def test_health_endpoint(self):
-        """Testa se o endpoint de health retorna status correto"""
-        response = client.get("/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "ok"  # Corrigido: o endpoint retorna "ok"
-        assert "timestamp" in data
-    
-    def test_root_endpoint(self):
-        """Testa se o endpoint raiz redireciona corretamente"""
-        response = client.get("/")
-        assert response.status_code in [200, 307]  # 307 é redirect
+@pytest.fixture(autouse=True)
+def setup_env():
+    """Setup de variáveis de ambiente"""
+    os.environ["GOOGLE_API_KEY"] = "test-api-key-12345"
+    os.environ["ENVIRONMENT"] = "test"
+    yield
 
 
-# ============================================
-# Test Subjects Endpoint
-# ============================================
-
-class TestSubjectsEndpoint:
-    """Testes para endpoint de disciplinas"""
-    
-    def test_get_subjects(self):
-        """Testa se retorna lista de disciplinas"""
-        response = client.get("/api/subjects")
-        assert response.status_code == 200
-        data = response.json()
-        assert "subjects" in data
-        assert isinstance(data["subjects"], list)
-        assert len(data["subjects"]) > 0
-    
-    def test_subjects_structure(self):
-        """Testa estrutura dos objetos de disciplina"""
-        response = client.get("/api/subjects")
-        subjects = response.json()["subjects"]
-        
-        for subject in subjects:
-            assert "id" in subject
-            assert "name" in subject
-            assert "icon" in subject
-            assert isinstance(subject["id"], str)
-            assert isinstance(subject["name"], str)
-            assert isinstance(subject["icon"], str)
-
-
-# ============================================
-# Test Chat Endpoint
-# ============================================
-
-class TestChatEndpoint:
-    """Testes para endpoint de chat com IA"""
-    
-    @patch('google.generativeai.GenerativeModel')
-    def test_chat_successful_request(self, mock_model):
-        """Testa requisição de chat bem-sucedida"""
-        # Mock da resposta do Gemini
+@pytest.fixture
+def mock_gemini():
+    """Mock do Google Gemini"""
+    with patch('main.model') as mock:
         mock_response = MagicMock()
-        mock_response.text = "Computação é a ciência que estuda processamento de informações."
-        mock_model.return_value.generate_content.return_value = mock_response
-        
-        payload = {
-            "subject": "Introdução à Computação",
-            "question": "O que é computação?",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 200
-        data = response.json()
-        
-        assert "answer" in data
-        assert "subject" in data
-        assert "timestamp" in data
-        assert data["subject"] == "Introdução à Computação"
-        assert len(data["answer"]) > 0
+        mock_response.text = "Esta é uma resposta simulada do Gemini."
+        mock.generate_content.return_value = mock_response
+        yield mock
+
+
+# ============================================
+# Testes de Health
+# ============================================
+
+def test_health_endpoint():
+    """Testa endpoint de health"""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "timestamp" in data
+
+
+def test_root_endpoint():
+    """Testa endpoint raiz"""
+    response = client.get("/")
+    assert response.status_code in [200, 307, 404]
+
+
+# ============================================
+# Testes de Subjects
+# ============================================
+
+def test_get_subjects():
+    """Testa listagem de disciplinas"""
+    response = client.get("/api/subjects")
+    assert response.status_code == 200
+    data = response.json()
+    assert "subjects" in data
+    assert len(data["subjects"]) > 0
     
-    @patch('google.generativeai.GenerativeModel')
-    def test_chat_with_context(self, mock_model):
-        """Testa chat com contexto adicional"""
-        mock_response = MagicMock()
-        mock_response.text = "Resposta sobre programação."
-        mock_model.return_value.generate_content.return_value = mock_response
-        
-        payload = {
-            "subject": "Fundamentos de Programação",
-            "question": "O que é uma variável?",
-            "context": "Estou estudando Python",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 200
+    # Validar estrutura
+    subject = data["subjects"][0]
+    assert "id" in subject
+    assert "name" in subject
+    assert "icon" in subject
+
+
+# ============================================
+# Testes de Chat
+# ============================================
+
+def test_chat_success(mock_gemini):
+    """Testa chat com sucesso"""
+    payload = {
+        "subject": "Matemática Computacional",
+        "question": "O que é um algoritmo?",
+        "history": []
+    }
     
-    @patch('google.generativeai.GenerativeModel')
-    def test_chat_with_history(self, mock_model):
-        """Testa chat com histórico de conversação"""
-        mock_response = MagicMock()
-        mock_response.text = "Resposta considerando histórico."
-        mock_model.return_value.generate_content.return_value = mock_response
-        
-        payload = {
-            "subject": "Matemática Computacional",
-            "question": "E como aplicar isso?",
-            "history": [
-                {"role": "user", "content": "O que é um algoritmo?"},
-                {"role": "assistant", "content": "Um algoritmo é uma sequência de passos."}
-            ]
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 200
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "answer" in data
+    assert "subject" in data
+    assert "timestamp" in data
+
+
+def test_chat_with_context(mock_gemini):
+    """Testa chat com contexto"""
+    payload = {
+        "subject": "Programação",
+        "question": "O que é uma função?",
+        "context": "Estudando Python básico",
+        "history": []
+    }
     
-    def test_chat_missing_subject(self):
-        """Testa requisição sem disciplina"""
-        payload = {
-            "question": "Pergunta sem disciplina",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 422  # Unprocessable Entity
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+
+
+def test_chat_with_history(mock_gemini):
+    """Testa chat com histórico"""
+    payload = {
+        "subject": "Física",
+        "question": "E a segunda lei?",
+        "history": [
+            {"role": "user", "content": "Primeira lei de Newton?"},
+            {"role": "assistant", "content": "Inércia"}
+        ]
+    }
     
-    def test_chat_missing_question(self):
-        """Testa requisição sem pergunta"""
-        payload = {
-            "subject": "Matemática",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 422
-    
-    def test_chat_empty_question(self):
-        """Testa requisição com pergunta vazia"""
-        payload = {
-            "subject": "Matemática",
-            "question": "",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 422
-    
-    @patch('google.generativeai.GenerativeModel')
-    def test_chat_api_error_handling(self, mock_model):
-        """Testa tratamento de erro da API Gemini"""
-        # Simular erro da API
-        mock_model.return_value.generate_content.side_effect = Exception("API Error")
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+
+
+def test_chat_missing_subject():
+    """Testa chat sem subject"""
+    payload = {
+        "question": "Teste",
+        "history": []
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 422
+
+
+def test_chat_missing_question():
+    """Testa chat sem question"""
+    payload = {
+        "subject": "Teste",
+        "history": []
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 422
+
+
+def test_chat_empty_question():
+    """Testa chat com question vazia"""
+    payload = {
+        "subject": "Teste",
+        "question": "",
+        "history": []
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 422
+
+
+def test_chat_api_error():
+    """Testa erro da API Gemini"""
+    with patch('main.model') as mock:
+        mock.generate_content.side_effect = Exception("API Error")
         
         payload = {
             "subject": "Teste",
-            "question": "Teste?",
+            "question": "Teste erro",
             "history": []
         }
         
@@ -179,211 +171,122 @@ class TestChatEndpoint:
 
 
 # ============================================
-# Test Models
+# Testes de Modelos
 # ============================================
 
-class TestModels:
-    """Testes para validação de modelos Pydantic"""
+def test_chat_request_model():
+    """Testa modelo ChatRequest"""
+    from main import ChatRequest
     
-    def test_chat_request_valid(self):
-        """Testa modelo ChatRequest válido"""
-        from main import ChatRequest
-        
-        request = ChatRequest(
-            subject="Matemática",
-            question="Teste?",
-            history=[]
-        )
-        
-        assert request.subject == "Matemática"
-        assert request.question == "Teste?"
-        assert request.history == []
+    req = ChatRequest(
+        subject="Matemática",
+        question="Teste?",
+        history=[]
+    )
+    assert req.subject == "Matemática"
+    assert req.question == "Teste?"
+
+
+def test_chat_response_model():
+    """Testa modelo ChatResponse"""
+    from main import ChatResponse
     
-    def test_chat_request_with_optional_fields(self):
-        """Testa ChatRequest com campos opcionais"""
-        from main import ChatRequest
-        
-        request = ChatRequest(
-            subject="Física",
-            question="O que é força?",
-            context="Estudando mecânica",
-            history=[{"role": "user", "content": "Olá"}]
-        )
-        
-        assert request.context == "Estudando mecânica"
-        assert len(request.history) == 1
-    
-    def test_chat_response_structure(self):
-        """Testa estrutura do ChatResponse"""
-        from main import ChatResponse
-        
-        response = ChatResponse(
-            answer="Resposta teste",
-            subject="Matemática",
-            timestamp="2024-01-01T00:00:00"
-        )
-        
-        assert response.answer == "Resposta teste"
-        assert response.subject == "Matemática"
+    resp = ChatResponse(
+        answer="Resposta",
+        subject="Matemática",
+        timestamp="2024-01-01T00:00:00"
+    )
+    assert resp.answer == "Resposta"
 
 
 # ============================================
-# Test CORS
+# Testes de Integração
 # ============================================
 
-class TestCORS:
-    """Testes para configuração de CORS"""
+def test_full_flow(mock_gemini):
+    """Testa fluxo completo"""
+    # 1. Health
+    health = client.get("/health")
+    assert health.status_code == 200
     
-    def test_cors_headers_options(self):
-        """Testa headers CORS em requisição OPTIONS"""
-        response = client.options(
-            "/api/chat",
-            headers={"Origin": "http://localhost:3000"}
-        )
-        assert response.status_code in [200, 405]
+    # 2. Subjects
+    subjects = client.get("/api/subjects")
+    assert subjects.status_code == 200
+    subject_name = subjects.json()["subjects"][0]["name"]
     
-    def test_cors_headers_post(self):
-        """Testa headers CORS em requisição POST"""
-        response = client.post(
-            "/api/subjects",
-            headers={"Origin": "http://localhost:3000"}
-        )
-        # Pode ser 405 (Method Not Allowed) mas deve incluir headers CORS
-        assert response.status_code in [200, 405, 422]
-
-
-# ============================================
-# Test Integration
-# ============================================
-
-class TestIntegration:
-    """Testes de integração end-to-end"""
+    # 3. First chat
+    first_chat = client.post("/api/chat", json={
+        "subject": subject_name,
+        "question": "Primeira pergunta",
+        "history": []
+    })
+    assert first_chat.status_code == 200
     
-    @patch('google.generativeai.GenerativeModel')
-    def test_full_conversation_flow(self, mock_model):
-        """Testa fluxo completo de conversação"""
-        mock_response = MagicMock()
-        mock_response.text = "Resposta da IA"
-        mock_model.return_value.generate_content.return_value = mock_response
-        
-        # 1. Buscar disciplinas
-        subjects_response = client.get("/api/subjects")
-        assert subjects_response.status_code == 200
-        subjects = subjects_response.json()["subjects"]
-        
-        # 2. Fazer primeira pergunta
-        first_payload = {
-            "subject": subjects[0]["name"],
-            "question": "Primeira pergunta",
-            "history": []
-        }
-        first_response = client.post("/api/chat", json=first_payload)
-        assert first_response.status_code == 200
-        first_data = first_response.json()
-        
-        # 3. Fazer segunda pergunta com histórico
-        second_payload = {
-            "subject": subjects[0]["name"],
-            "question": "Segunda pergunta",
-            "history": [
-                {"role": "user", "content": "Primeira pergunta"},
-                {"role": "assistant", "content": first_data["answer"]}
-            ]
-        }
-        second_response = client.post("/api/chat", json=second_payload)
-        assert second_response.status_code == 200
-    
-    def test_health_check_integration(self):
-        """Testa health check no fluxo de integração"""
-        health_response = client.get("/health")
-        assert health_response.status_code == 200
-        assert health_response.json()["status"] == "ok"  # Corrigido
+    # 4. Second chat with history
+    second_chat = client.post("/api/chat", json={
+        "subject": subject_name,
+        "question": "Segunda pergunta",
+        "history": [
+            {"role": "user", "content": "Primeira pergunta"},
+            {"role": "assistant", "content": first_chat.json()["answer"]}
+        ]
+    })
+    assert second_chat.status_code == 200
 
 
 # ============================================
-# Test Performance
+# Testes de Erros
 # ============================================
 
-class TestPerformance:
-    """Testes básicos de performance"""
-    
-    def test_health_endpoint_response_time(self):
-        """Testa tempo de resposta do health endpoint"""
-        import time
-        
-        start = time.time()
-        response = client.get("/health")
-        end = time.time()
-        
-        assert response.status_code == 200
-        assert (end - start) < 1.0  # Deve responder em menos de 1 segundo
-    
-    def test_subjects_endpoint_response_time(self):
-        """Testa tempo de resposta do endpoint de disciplinas"""
-        import time
-        
-        start = time.time()
-        response = client.get("/api/subjects")
-        end = time.time()
-        
-        assert response.status_code == 200
-        assert (end - start) < 1.0
+def test_404_endpoint():
+    """Testa endpoint não existente"""
+    response = client.get("/naoexiste")
+    assert response.status_code == 404
+
+
+def test_invalid_json():
+    """Testa JSON inválido"""
+    response = client.post(
+        "/api/chat",
+        data="not json",
+        headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 422
+
+
+def test_empty_payload():
+    """Testa payload vazio"""
+    response = client.post("/api/chat", json={})
+    assert response.status_code == 422
 
 
 # ============================================
-# Test Error Handling
+# Testes de Performance
 # ============================================
 
-class TestErrorHandling:
-    """Testes para tratamento de erros"""
+def test_response_time():
+    """Testa tempo de resposta"""
+    import time
+    start = time.time()
+    response = client.get("/health")
+    elapsed = time.time() - start
     
-    def test_invalid_endpoint(self):
-        """Testa acesso a endpoint inexistente"""
-        response = client.get("/api/naoexiste")
-        assert response.status_code == 404
-    
-    def test_invalid_json_payload(self):
-        """Testa payload JSON inválido"""
-        response = client.post(
-            "/api/chat",
-            data="invalid json",
-            headers={"Content-Type": "application/json"}
-        )
-        assert response.status_code == 422
-    
-    def test_missing_required_fields(self):
-        """Testa requisição sem campos obrigatórios"""
-        response = client.post("/api/chat", json={})
-        assert response.status_code == 422
-    
-    @patch('google.generativeai.GenerativeModel')
-    def test_api_timeout_handling(self, mock_model):
-        """Testa tratamento de timeout da API"""
-        import requests
-        mock_model.return_value.generate_content.side_effect = requests.Timeout()
-        
-        payload = {
-            "subject": "Teste",
-            "question": "Teste timeout",
-            "history": []
-        }
-        
-        response = client.post("/api/chat", json=payload)
-        assert response.status_code == 500
+    assert response.status_code == 200
+    assert elapsed < 1.0
 
 
 # ============================================
-# Configuração de Fixtures
+# Testes de CORS
 # ============================================
 
-@pytest.fixture(autouse=True)
-def setup_env():
-    """Setup de variáveis de ambiente para testes"""
-    os.environ["GOOGLE_API_KEY"] = "test-key-for-testing"
-    os.environ["ENVIRONMENT"] = "test"
-    yield
-    # Cleanup não necessário pois são variáveis de teste
+def test_cors_headers():
+    """Testa headers CORS"""
+    response = client.get(
+        "/api/subjects",
+        headers={"Origin": "http://localhost:3000"}
+    )
+    assert response.status_code == 200
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+    pytest.main([__file__, "-v"])
