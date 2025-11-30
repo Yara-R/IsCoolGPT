@@ -1,56 +1,32 @@
-# tests/conftest.py
-import os
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-from main import app
+from unittest.mock import Mock
+import os
+import sys
 
-# -----------------------------
-# Client para testes
-# -----------------------------
-@pytest.fixture(scope="session")
-def client():
-    return TestClient(app)
+# Adicionar diretório raiz ao path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# -----------------------------
-# Variáveis de ambiente
-# -----------------------------
-@pytest.fixture(autouse=True)
-def mock_env(monkeypatch):
-    monkeypatch.setenv("GOOGLE_API_KEY", "test-api-key")
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    yield
 
-# -----------------------------
-# Mock do Gemini
-# -----------------------------
-@pytest.fixture
-def mock_gemini():
-    with patch("main.model") as mock:
-        fake_response = MagicMock()
-        fake_response.text = "Resposta simulada Gemini"
-        mock.generate_content.return_value = fake_response
-        yield mock
-
-# -----------------------------
-# Requests exemplo
-# -----------------------------
 @pytest.fixture
 def sample_chat_request():
+    """Fixture com request de chat padrão"""
     return {
         "subject": "Matemática",
-        "question": "Explique números primos",
+        "question": "O que é um número primo?",
+        "context": None,
         "history": []
     }
 
+
+
 @pytest.fixture
-def sample_chat_with_history():
-    return {
-        "subject": "Física",
-        "question": "Explique velocidade",
-        "context": "cinemática",
-        "history": [
-            {"role": "user", "content": "O que é movimento?"},
-            {"role": "assistant", "content": "Movimento é..."}
-        ]
-    }
+def mock_env_vars(monkeypatch):
+    """Fixture para configurar variáveis de ambiente de teste"""
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-api-key-12345")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+
+
+@pytest.fixture(autouse=True)
+def setup_test_env(mock_env_vars):
+    """Configuração automática de ambiente de teste"""
+    pass
