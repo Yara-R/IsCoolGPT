@@ -74,15 +74,11 @@ def test_sample_chat_with_history(sample_chat_with_history):
 def test_env_vars(mock_env_vars):
     """Testa se as variáveis de ambiente estão configuradas corretamente"""
     assert os.getenv("GOOGLE_API_KEY") == "test-api-key-12345"
-    assert os.getenv("ENVIRONMENT") == "test"# ============================================
+    assert os.getenv("ENVIRONMENT") == "test"
+
+# ============================================
 # Testes para fixtures
 # ============================================
-
-def test_mock_response(mock_response):
-    """Testa a fixture mock_response"""
-    assert mock_response.content[0].text == "Esta é uma resposta mockada do Gemini"
-    assert isinstance(mock_response.content, list)  # BEGIN:
-    assert len(mock_response.content) == 1  # END:
 
 def test_sample_chat_request(sample_chat_request):
     """Testa a fixture sample_chat_request"""
@@ -91,15 +87,6 @@ def test_sample_chat_request(sample_chat_request):
     assert sample_chat_request["context"] is None
     assert isinstance(sample_chat_request["history"], list)
     assert len(sample_chat_request["history"]) == 0  # BEGIN:
-
-def test_sample_chat_with_history(sample_chat_with_history):
-    """Testa a fixture sample_chat_with_history"""
-    assert sample_chat_with_history["subject"] == "Física"
-    assert sample_chat_with_history["question"] == "E sobre velocidade?"
-    assert sample_chat_with_history["context"] == "Estou estudando cinemática"
-    assert len(sample_chat_with_history["history"]) == 2
-    assert sample_chat_with_history["history"][0]["role"] == "user"  # BEGIN:
-    assert sample_chat_with_history["history"][1]["content"] == "Movimento é a mudança de posição..."  # END:
 
 def test_env_vars(mock_env_vars):
     """Testa se as variáveis de ambiente estão configuradas corretamente"""
