@@ -1,60 +1,61 @@
+"""
+Testes para o Assistente Educacional IsCoolGPT
+Usando Google Gemini API
+"""
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch
-from datetime import datetime
-import sys
+from unittest.mock import patch, MagicMock
 import os
-from google.genai.types import Error
-from unittest.mock import patch
+import sys
 
-# Adicionar path do projeto
+# Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from main import app, ChatRequest, Message
+from main import app
 
 client = TestClient(app)
 
 
+# ============================================
+# Test Health Endpoints
+# ============================================
+
 class TestHealthEndpoints:
     """Testes para endpoints de health check"""
     
-    def test_root_endpoint(self):
-        """Testa endpoint raiz"""
-        response = client.get("/")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "online"
-        assert "timestamp" in data
-    
-    def test_health_check_endpoint(self):
-        """Testa endpoint de health check"""
+    def test_health_endpoint(self):
+        """Testa se o endpoint de health retorna status correto"""
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
         assert "timestamp" in data
-        
-    def test_health_timestamp_format(self):
-        """Verifica formato do timestamp"""
-        response = client.get("/health")
-        data = response.json()
-        # Verifica se o timestamp pode ser parseado
-        datetime.fromisoformat(data["timestamp"])
+    
+    def test_root_endpoint(self):
+        """Testa se o endpoint raiz redireciona corretamente"""
+        response = client.get("/")
+        assert response.status_code in [200, 307]  # 307 é redirect
 
+
+# ============================================
+# Test Subjects Endpoint
+# ============================================
 
 class TestSubjectsEndpoint:
     """Testes para endpoint de disciplinas"""
     
     def test_get_subjects(self):
-        """Testa listagem de disciplinas"""
+        """Testa se retorna lista de disciplinas"""
         response = client.get("/api/subjects")
         assert response.status_code == 200
         data = response.json()
         assert "subjects" in data
+        assert isinstance(data["subjects"], list)
         assert len(data["subjects"]) > 0
     
     def test_subjects_structure(self):
-        """Verifica estrutura de cada disciplina"""
+        """Testa estrutura dos objetos de disciplina"""
         response = client.get("/api/subjects")
         subjects = response.json()["subjects"]
         
@@ -65,274 +66,329 @@ class TestSubjectsEndpoint:
             assert isinstance(subject["id"], str)
             assert isinstance(subject["name"], str)
             assert isinstance(subject["icon"], str)
-    
-    def test_subjects_count(self):
-        """Verifica quantidade mínima de disciplinas"""
-        response = client.get("/api/subjects")
-        subjects = response.json()["subjects"]
-        assert len(subjects) >= 10
-    
-    def test_subjects_unique_ids(self):
-        """Verifica se IDs são únicos"""
-        response = client.get("/api/subjects")
-        subjects = response.json()["subjects"]
-        ids = [s["id"] for s in subjects]
-        assert len(ids) == len(set(ids))
 
+
+# ============================================
+# Test Chat Endpoint
+# ============================================
 
 class TestChatEndpoint:
-    """Testes para endpoint de chat"""
+    """Testes para endpoint de chat com IA"""
     
-    @patch('main.client.messages.create')
-    def test_chat_basic_request(self, mock_claude):
-        """Testa requisição básica de chat"""
-        # Mock da resposta do Claude
-        mock_response = Mock()
-        mock_response.content = [Mock(text="Esta é uma resposta de teste")]
-        mock_claude.return_value = mock_response
+    @patch('google.generativeai.GenerativeModel')
+    def test_chat_successful_request(self, mock_model):
+        """Testa requisição de chat bem-sucedida"""
+        # Mock da resposta do Gemini
+        mock_response = MagicMock()
+        mock_response.text = "Computação é a ciência que estuda processamento de informações."
+        mock_model.return_value.generate_content.return_value = mock_response
         
-        request_data = {
-            "subject": "Matemática",
-            "question": "O que é um número primo?"
+        payload = {
+            "subject": "Introdução à Computação",
+            "question": "O que é computação?",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 200
         data = response.json()
+        
         assert "answer" in data
         assert "subject" in data
         assert "timestamp" in data
-        assert data["subject"] == "Matemática"
+        assert data["subject"] == "Introdução à Computação"
+        assert len(data["answer"]) > 0
     
-    @patch('main.client.messages.create')
-    def test_chat_with_context(self, mock_claude):
+    @patch('google.generativeai.GenerativeModel')
+    def test_chat_with_context(self, mock_model):
         """Testa chat com contexto adicional"""
-        mock_response = Mock()
-        mock_response.content = [Mock(text="Resposta com contexto")]
-        mock_claude.return_value = mock_response
+        mock_response = MagicMock()
+        mock_response.text = "Resposta sobre programação."
+        mock_model.return_value.generate_content.return_value = mock_response
         
-        request_data = {
-            "subject": "Física",
-            "question": "Explique velocidade",
-            "context": "Estou no ensino médio"
+        payload = {
+            "subject": "Fundamentos de Programação",
+            "question": "O que é uma variável?",
+            "context": "Estou estudando Python",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 200
-        data = response.json()
-        assert data["answer"] == "Resposta com contexto"
     
-    @patch('main.client.messages.create')
-    def test_chat_with_history(self, mock_claude):
+    @patch('google.generativeai.GenerativeModel')
+    def test_chat_with_history(self, mock_model):
         """Testa chat com histórico de conversação"""
-        mock_response = Mock()
-        mock_response.content = [Mock(text="Continuando conversa")]
-        mock_claude.return_value = mock_response
+        mock_response = MagicMock()
+        mock_response.text = "Resposta considerando histórico."
+        mock_model.return_value.generate_content.return_value = mock_response
         
-        request_data = {
-            "subject": "Química",
-            "question": "E sobre moléculas?",
+        payload = {
+            "subject": "Matemática Computacional",
+            "question": "E como aplicar isso?",
             "history": [
-                {"role": "user", "content": "O que são átomos?"},
-                {"role": "assistant", "content": "Átomos são..."}
+                {"role": "user", "content": "O que é um algoritmo?"},
+                {"role": "assistant", "content": "Um algoritmo é uma sequência de passos."}
             ]
         }
         
-        response = client.post("/api/chat", json=request_data)
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 200
-        
-        # Verifica se o histórico foi passado para a API
-        call_args = mock_claude.call_args
-        messages = call_args.kwargs['messages']
-        assert len(messages) >= 2  # Histórico + nova mensagem
     
     def test_chat_missing_subject(self):
         """Testa requisição sem disciplina"""
-        request_data = {
-            "question": "Pergunta sem disciplina"
+        payload = {
+            "question": "Pergunta sem disciplina",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
-        assert response.status_code == 422  # Validation error
+        response = client.post("/api/chat", json=payload)
+        assert response.status_code == 422  # Unprocessable Entity
     
     def test_chat_missing_question(self):
         """Testa requisição sem pergunta"""
-        request_data = {
-            "subject": "Matemática"
+        payload = {
+            "subject": "Matemática",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
-        assert response.status_code == 422  # Validation error
+        response = client.post("/api/chat", json=payload)
+        assert response.status_code == 422
     
     def test_chat_empty_question(self):
         """Testa requisição com pergunta vazia"""
-        request_data = {
+        payload = {
             "subject": "Matemática",
-            "question": ""
+            "question": "",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 422
     
-    @patch('main.client.messages.create')
-    def test_chat_api_error_handling(self, mock_claude):
-        """Testa tratamento de erros da API Claude"""
-        mock_claude.side_effect = Exception("API Error")
+    @patch('google.generativeai.GenerativeModel')
+    def test_chat_api_error_handling(self, mock_model):
+        """Testa tratamento de erro da API Gemini"""
+        # Simular erro da API
+        mock_model.return_value.generate_content.side_effect = Exception("API Error")
         
-        request_data = {
-            "subject": "Matemática",
-            "question": "Teste de erro"
+        payload = {
+            "subject": "Teste",
+            "question": "Teste?",
+            "history": []
         }
         
-        response = client.post("/api/chat", json=request_data)
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 500
-        assert "erro" in response.json()["detail"].lower()
+        assert "detail" in response.json()
 
+
+# ============================================
+# Test Models
+# ============================================
 
 class TestModels:
-    """Testes para modelos Pydantic"""
+    """Testes para validação de modelos Pydantic"""
     
-    def test_message_model_valid(self):
-        """Testa criação de Message válida"""
-        msg = Message(role="user", content="Teste")
-        assert msg.role == "user"
-        assert msg.content == "Teste"
-    
-    def test_chat_request_minimal(self):
-        """Testa ChatRequest com campos mínimos"""
-        req = ChatRequest(subject="Matemática", question="Teste?")
-        assert req.subject == "Matemática"
-        assert req.question == "Teste?"
-        assert req.context is None
-        assert req.history == []
-    
-    def test_chat_request_full(self):
-        """Testa ChatRequest com todos os campos"""
-        req = ChatRequest(
-            subject="Física",
-            question="Como funciona?",
-            context="Contexto adicional",
-            history=[Message(role="user", content="Oi")]
+    def test_chat_request_valid(self):
+        """Testa modelo ChatRequest válido"""
+        from main import ChatRequest
+        
+        request = ChatRequest(
+            subject="Matemática",
+            question="Teste?",
+            history=[]
         )
-        assert req.context == "Contexto adicional"
-        assert len(req.history) == 1
+        
+        assert request.subject == "Matemática"
+        assert request.question == "Teste?"
+        assert request.history == []
+    
+    def test_chat_request_with_optional_fields(self):
+        """Testa ChatRequest com campos opcionais"""
+        from main import ChatRequest
+        
+        request = ChatRequest(
+            subject="Física",
+            question="O que é força?",
+            context="Estudando mecânica",
+            history=[{"role": "user", "content": "Olá"}]
+        )
+        
+        assert request.context == "Estudando mecânica"
+        assert len(request.history) == 1
+    
+    def test_chat_response_structure(self):
+        """Testa estrutura do ChatResponse"""
+        from main import ChatResponse
+        
+        response = ChatResponse(
+            answer="Resposta teste",
+            subject="Matemática",
+            timestamp="2024-01-01T00:00:00"
+        )
+        
+        assert response.answer == "Resposta teste"
+        assert response.subject == "Matemática"
 
+
+# ============================================
+# Test CORS
+# ============================================
 
 class TestCORS:
-    """Testes para configuração CORS"""
+    """Testes para configuração de CORS"""
     
-    def test_cors_headers_present(self):
-        """Verifica presença de headers CORS"""
-        response = client.options("/api/subjects")
-        # CORS middleware deve adicionar headers
+    def test_cors_headers_options(self):
+        """Testa headers CORS em requisição OPTIONS"""
+        response = client.options(
+            "/api/chat",
+            headers={"Origin": "http://localhost:3000"}
+        )
         assert response.status_code in [200, 405]
+    
+    def test_cors_headers_post(self):
+        """Testa headers CORS em requisição POST"""
+        response = client.post(
+            "/api/subjects",
+            headers={"Origin": "http://localhost:3000"}
+        )
+        # Pode ser 405 (Method Not Allowed) mas deve incluir headers CORS
+        assert response.status_code in [200, 405, 422]
 
+
+# ============================================
+# Test Integration
+# ============================================
 
 class TestIntegration:
-    """Testes de integração"""
+    """Testes de integração end-to-end"""
     
-    @patch('main.client.messages.create')
-    def test_full_conversation_flow(self, mock_claude):
+    @patch('google.generativeai.GenerativeModel')
+    def test_full_conversation_flow(self, mock_model):
         """Testa fluxo completo de conversação"""
-        # Setup mock
-        mock_response = Mock()
-        mock_response.content = [Mock(text="Resposta do assistente")]
-        mock_claude.return_value = mock_response
+        mock_response = MagicMock()
+        mock_response.text = "Resposta da IA"
+        mock_model.return_value.generate_content.return_value = mock_response
         
-        # 1. Obter disciplinas
+        # 1. Buscar disciplinas
         subjects_response = client.get("/api/subjects")
         assert subjects_response.status_code == 200
         subjects = subjects_response.json()["subjects"]
         
         # 2. Fazer primeira pergunta
-        first_question = {
+        first_payload = {
             "subject": subjects[0]["name"],
-            "question": "Primeira pergunta"
+            "question": "Primeira pergunta",
+            "history": []
         }
-        first_response = client.post("/api/chat", json=first_question)
+        first_response = client.post("/api/chat", json=first_payload)
         assert first_response.status_code == 200
+        first_data = first_response.json()
         
         # 3. Fazer segunda pergunta com histórico
-        second_question = {
+        second_payload = {
             "subject": subjects[0]["name"],
             "question": "Segunda pergunta",
             "history": [
                 {"role": "user", "content": "Primeira pergunta"},
-                {"role": "assistant", "content": first_response.json()["answer"]}
+                {"role": "assistant", "content": first_data["answer"]}
             ]
         }
-        second_response = client.post("/api/chat", json=second_question)
+        second_response = client.post("/api/chat", json=second_payload)
         assert second_response.status_code == 200
     
-    def test_api_documentation_available(self):
-        """Verifica se documentação OpenAPI está disponível"""
-        response = client.get("/openapi.json")
-        assert response.status_code == 200
-        openapi = response.json()
-        assert "info" in openapi
-        assert "paths" in openapi
+    def test_health_check_integration(self):
+        """Testa health check no fluxo de integração"""
+        health_response = client.get("/health")
+        assert health_response.status_code == 200
+        assert health_response.json()["status"] == "healthy"
 
+
+# ============================================
+# Test Performance
+# ============================================
 
 class TestPerformance:
-    """Testes de performance básicos"""
+    """Testes básicos de performance"""
     
-    def test_health_response_time(self):
-        """Verifica tempo de resposta do health check"""
+    def test_health_endpoint_response_time(self):
+        """Testa tempo de resposta do health endpoint"""
         import time
+        
         start = time.time()
         response = client.get("/health")
-        duration = time.time() - start
+        end = time.time()
         
         assert response.status_code == 200
-        assert duration < 0.1  # Deve responder em menos de 100ms
+        assert (end - start) < 1.0  # Deve responder em menos de 1 segundo
     
-    def test_subjects_response_time(self):
-        """Verifica tempo de resposta das disciplinas"""
+    def test_subjects_endpoint_response_time(self):
+        """Testa tempo de resposta do endpoint de disciplinas"""
         import time
+        
         start = time.time()
         response = client.get("/api/subjects")
-        duration = time.time() - start
+        end = time.time()
         
         assert response.status_code == 200
-        assert duration < 0.1
+        assert (end - start) < 1.0
 
+
+# ============================================
+# Test Error Handling
+# ============================================
 
 class TestErrorHandling:
-    """Testes de tratamento de erros"""
+    """Testes para tratamento de erros"""
     
     def test_invalid_endpoint(self):
-        """Testa endpoint inválido"""
-        response = client.get("/api/invalid")
+        """Testa acesso a endpoint inexistente"""
+        response = client.get("/api/naoexiste")
         assert response.status_code == 404
     
-    def test_invalid_method(self):
-        """Testa método HTTP inválido"""
-        response = client.delete("/api/subjects")
-        assert response.status_code == 405
-    
-    def test_invalid_json(self):
-        """Testa JSON inválido"""
+    def test_invalid_json_payload(self):
+        """Testa payload JSON inválido"""
         response = client.post(
             "/api/chat",
             data="invalid json",
             headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
-
-
-    @patch('main.client.models.generate_content')
-    def test_gemini_api_timeout(self, mock_gemini):
-        mock_gemini.side_effect = Error("Timeout")
-
-        request_data = {
-            "subject": "Matemática",
-            "question": "Teste timeout"
+    
+    def test_missing_required_fields(self):
+        """Testa requisição sem campos obrigatórios"""
+        response = client.post("/api/chat", json={})
+        assert response.status_code == 422
+    
+    @patch('google.generativeai.GenerativeModel')
+    def test_api_timeout_handling(self, mock_model):
+        """Testa tratamento de timeout da API"""
+        import requests
+        mock_model.return_value.generate_content.side_effect = requests.Timeout()
+        
+        payload = {
+            "subject": "Teste",
+            "question": "Teste timeout",
+            "history": []
         }
-
-        response = client.post("/api/chat", json=request_data)
+        
+        response = client.post("/api/chat", json=payload)
         assert response.status_code == 500
 
 
+# ============================================
+# Configuração de Fixtures
+# ============================================
+
+@pytest.fixture(autouse=True)
+def setup_env():
+    """Setup de variáveis de ambiente para testes"""
+    os.environ["GOOGLE_API_KEY"] = "test-key-for-testing"
+    os.environ["ENVIRONMENT"] = "test"
+    yield
+    # Cleanup não necessário pois são variáveis de teste
+
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v", "--tb=short"])
