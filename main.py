@@ -65,23 +65,30 @@ class ChatResponse(BaseModel):
 # ---------------------------
 # ENDPOINT: LISTA DE DISCIPLINAS
 # ---------------------------
+SUBJECTS = [
+    {"id": "intro_comp", "name": "Introdução à Computação", "icon": "💻"},
+    {"id": "prog1", "name": "Fundamentos de Programação", "icon": "👨‍💻"},
+    {"id": "logica", "name": "Lógica Matemática", "icon": "🧠"},
+    {"id": "matematica", "name": "Matemática para Computação", "icon": "📐"},
+    {"id": "poo", "name": "Programação Orientada a Objetos", "icon": "📦"},
+    {"id": "bd", "name": "Banco de Dados", "icon": "🗄️"},
+    {"id": "redes", "name": "Redes de Computadores", "icon": "🌐"},
+    {"id": "so", "name": "Sistemas Operacionais", "icon": "🖥️"},
+    {"id": "seg_info", "name": "Segurança da Informação", "icon": "🔐"},
+]
 
 @app.get("/api/subjects")
 async def get_subjects():
-    subjects = [
-        {"id": "intro_comp", "name": "Introdução à Computação", "icon": "💻"},
-        {"id": "prog1", "name": "Fundamentos de Programação", "icon": "👨‍💻"},
-        {"id": "logica", "name": "Lógica Matemática", "icon": "🧠"},
-        {"id": "matematica", "name": "Matemática para Computação", "icon": "📐"},
-        {"id": "poo", "name": "Programação Orientada a Objetos", "icon": "📦"},
-        {"id": "bd", "name": "Banco de Dados", "icon": "🗄️"},
-        {"id": "redes", "name": "Redes de Computadores", "icon": "🌐"},
-        {"id": "so", "name": "Sistemas Operacionais", "icon": "🖥️"},
-        {"id": "seg_info", "name": "Segurança da Informação", "icon": "🔐"},
-    ]
-    return {"subjects": subjects}
+    return {"subjects": SUBJECTS}
 
-
+def _is_valid_subject(subj: str) -> bool:
+    if not subj:
+        return False
+    subj_lower = subj.strip().lower()
+    for s in SUBJECTS:
+        if subj_lower == s["id"].lower() or subj_lower == s["name"].lower():
+            return True
+    return False
 # ---------------------------
 # ENDPOINT: CHAT (COM GEMINI)
 # ---------------------------
@@ -92,14 +99,18 @@ async def chat(request: ChatRequest):
         subject = request.subject
         question = request.question
 
+        # validação do subject -> retorna 422 se inválido
+        if not _is_valid_subject(subject):
+            raise HTTPException(status_code=422, detail=f"Invalid subject: {subject}")
+
         prompt = f"""
-Você é um coach de estudos para concursos especializado em {subject}. Responda com foco em em explicar da melhor maneira, correção de erros teóricos e práticos e objetividade:
+Você é um coach de estudos para concursos especializado em {subject}. Responda com foco em explicar da melhor maneira, correção de erros teóricos e práticos e objetividade:
 - Dê a solução direta (código/comando/algoritmo se aplicável).
 - Explique linha a linha ou etapa a etapa.
 - Destaque a alternativa correta (se houver alternativas) e explique por que as outras estão erradas.
 - Liste formulações de questões semelhantes para praticar.
-- A ponte erros comuns e como evitá-los.
-- seja claro e detalhado. 
+- Aponte erros comuns e como evitá-los.
+- Seja claro e detalhado.
 - Ajude o aluno a entender profundamente o assunto.
 - Use exemplos práticos quando possível.
 - Mantenha a resposta organizada com tópicos e subtópicos.
@@ -109,7 +120,6 @@ Pergunta do aluno:
 {question}
 """
 
-
         response = model.generate_content(prompt)
 
         # resposta segura
@@ -118,20 +128,23 @@ Pergunta do aluno:
         return {
             "answer": answer,
             "subject": subject,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
 
+    except HTTPException:
+        # repropaga exceções HTTP (ex.: 422) para que o FastAPI as retorne corretamente
+        raise
     except Exception as e:
+        # log do erro para debugging e retorna 500 para erros inesperados
         print("ERRO NO CHAT:", str(e))
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
-
 
 # ---------------------------
 
 @app.get("/health")
 def health():
     return {"status": "ok"
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat() + "Z"
     }
 
 # ---------------------------
