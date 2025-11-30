@@ -130,7 +130,9 @@ Pergunta do aluno:
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok"
+            "timestamp": datetime.utcnow().isoformat()
+    }
 
 # ---------------------------
 
