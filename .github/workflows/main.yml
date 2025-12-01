@@ -1,15 +1,19 @@
-name: CD - Deploy Production
+name: CD - Deploy to AWS EC2
 
 on:
   push:
     branches: ["main"]
 
+env:
+  DOCKERHUB_REPO: iscoolgpt
+  AWS_REGION: us-east-1
+
 jobs:
-  deploy-production:
+  deploy-to-ec2:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout do código
+      - name: Checkout código
         uses: actions/checkout@v4
 
       - name: Login no DockerHub
@@ -18,35 +22,65 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build da imagem
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/iscoolgpt:latest .
-
-      - name: Push da imagem
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/iscoolgpt:latest
-
-      - name: Configurar SSH
+      - name: Build e Push da imagem Docker
         run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+
+      - name: Configurar AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy para EC2 via SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ubuntu
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          # Configurar SSH
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy em produção via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ~/IsCoolGPT || cd /home/${{ secrets.SSH_USER }}/IsCoolGPT
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key.pem
+          chmod 600 ~/.ssh/deploy_key.pem
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          
+          # Deploy via SSH
+          ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'ENDSSH'
+            # Atualizar código
+            cd ~/IsCoolGPT || git clone https://github.com/${{ github.repository }}.git ~/IsCoolGPT
+            cd ~/IsCoolGPT
+            git pull origin main
             
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/iscoolgpt:latest
+            # Configurar variáveis de ambiente
+            echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > .env
+            echo "ENVIRONMENT=production" >> .env
             
+            # Pull nova imagem
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+            
+            # Restart containers
             docker-compose down
-            
             docker-compose up -d --build
             
-            docker image prune -f
-          EOF
+            # Cleanup
+            docker image prune -af --filter "until=24h"
+            
+            # Verificar status
+            docker-compose ps
+          ENDSSH
 
-      - name: Verificar deploy
+      - name: Health Check
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            docker ps | grep iscoolgpt
-          EOF
+          sleep 10
+          curl -f http://${{ secrets.EC2_HOST }}:8000/health || exit 1
+
+      - name: Notificar sucesso
+        if: success()
+        run: |
+          echo "✅ Deploy realizado com sucesso!"
+          echo "🌐 URL: http://${{ secrets.EC2_HOST }}"
+          echo "📚 Docs: http://${{ secrets.EC2_HOST }}:8000/docs"
