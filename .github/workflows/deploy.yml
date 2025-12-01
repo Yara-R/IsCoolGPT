@@ -43,6 +43,13 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             cd ${{ secrets.EC2_PATH }}
+
+            if ! command -v docker-compose &> /dev/null; then
+                DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+                sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+                sudo chmod +x /usr/local/bin/docker-compose
+            fi
+            
             sudo docker-compose down
             sudo docker system prune -af
             export GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
