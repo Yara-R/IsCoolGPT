@@ -27,23 +27,14 @@ jobs:
       - name: Configurar SSH
         run: |
           mkdir -p ~/.ssh
-          # Salvar chave preservando formato
-          cat > ~/.ssh/id_rsa << 'EOFKEY'
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOFKEY
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Configurar SSH para aceitar RSA
-          cat > ~/.ssh/config << 'EOFCONFIG'
-          Host *
-            PubkeyAcceptedKeyTypes +ssh-rsa
-            HostKeyAlgorithms +ssh-rsa
-          EOFCONFIG
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy em produção
         run: |
           echo "Deploy em produção"
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -o UserKnownHostsFile=/dev/null ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
             docker compose -f docker-compose.prod.yml up -d
           EOF
