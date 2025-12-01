@@ -48,3 +48,4 @@ jobs:
             export GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}"
             sudo docker-compose pull
             sudo docker-compose up -d --build
+
