@@ -1,4 +1,4 @@
-name: CD - Deploy to AWS EC2
+name: CD - Deploy to Production
 
 on:
   push:
@@ -6,10 +6,9 @@ on:
 
 env:
   DOCKERHUB_REPO: iscoolgpt
-  AWS_REGION: us-east-1
 
 jobs:
-  deploy-to-ec2:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,65 +21,68 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build e Push da imagem Docker
+      - name: Build e Push Docker
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ github.sha }}
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
 
-      - name: Configurar AWS CLI
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy para EC2 via SSH
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ubuntu
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          # Configurar SSH
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key.pem
-          chmod 600 ~/.ssh/deploy_key.pem
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
-          
-          # Deploy via SSH
-          ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'ENDSSH'
-            # Atualizar código
-            cd ~/IsCoolGPT || git clone https://github.com/${{ github.repository }}.git ~/IsCoolGPT
-            cd ~/IsCoolGPT
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Navegar ou clonar repositório
+            if [ ! -d "IsCoolGPT" ]; then
+              git clone https://github.com/${{ github.repository }}.git IsCoolGPT
+            fi
+            cd IsCoolGPT
             git pull origin main
             
-            # Configurar variáveis de ambiente
-            echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > .env
-            echo "ENVIRONMENT=production" >> .env
+            # Configurar .env
+            cat > .env << EOF
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            ENVIRONMENT=production
+            EOF
             
             # Pull nova imagem
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
             
-            # Restart containers
-            docker-compose down
-            docker-compose up -d --build
+            # Restart
+            sudo docker-compose down
+            sudo docker-compose up -d --build
+            
+            # Verificar
+            sudo docker-compose ps
             
             # Cleanup
-            docker image prune -af --filter "until=24h"
-            
-            # Verificar status
-            docker-compose ps
-          ENDSSH
+            sudo docker image prune -af
 
       - name: Health Check
         run: |
-          sleep 10
-          curl -f http://${{ secrets.EC2_HOST }}:8000/health || exit 1
+          sleep 15
+          max_attempts=5
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -f http://${{ secrets.EC2_HOST }}:8000/health; then
+              echo "✅ Health check passou!"
+              exit 0
+            fi
+            attempt=$((attempt + 1))
+            echo "⏳ Tentativa $attempt/$max_attempts falhou, aguardando..."
+            sleep 10
+          done
+          
+          echo "❌ Health check falhou após $max_attempts tentativas"
+          exit 1
 
-      - name: Notificar sucesso
+      - name: Notificar Deploy
         if: success()
         run: |
-          echo "✅ Deploy realizado com sucesso!"
-          echo "🌐 URL: http://${{ secrets.EC2_HOST }}"
-          echo "📚 Docs: http://${{ secrets.EC2_HOST }}:8000/docs"
+          echo "🎉 Deploy concluído com sucesso!"
+          echo "🌐 Frontend: http://${{ secrets.EC2_HOST }}"
+          echo "📚 API Docs: http://${{ secrets.EC2_HOST }}:8000/docs"
+          echo "💚 Health: http://${{ secrets.EC2_HOST }}:8000/health"
