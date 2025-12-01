@@ -1,32 +1,22 @@
 {
-  "family": "iscoolgpt-staging-task",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
+    "family": "iscoolgpt-staging-task",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "256",
+    "memory": "512",
+    "containerDefinitions": [
+      {
+        "name": "iscoolgpt",
+        "image": "383140420454.dkr.ecr.us-east-2.amazonaws.com/iscoolgpt-staging",
 
-  "executionRoleArn": "arn:aws:iam::383140420454:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::383140420454:role/ecsTaskExecutionRole",
-
-  "containerDefinitions": [
-    {
-      "name": "iscoolgpt",
-      "image": "383140420454.dkr.ecr.us-east-2.amazonaws.com/iscoolgpt-staging:latest",
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": 8000,
-          "protocol": "tcp"
-        }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/iscoolgpt-staging",
-          "awslogs-region": "us-east-2",
-          "awslogs-stream-prefix": "ecs"
-        }
+        "essential": true,
+        "portMappings": [
+          {
+            "containerPort": 8000,
+            "protocol": "tcp"
+          }
+        ]
       }
-    }
-  ]
-}
+    ]
+  }
+  
