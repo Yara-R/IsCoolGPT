@@ -7,7 +7,7 @@ on:
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -24,6 +24,13 @@ jobs:
       - name: Push da imagem
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
 
+<<<<<<< HEAD
+      - name: Deploy em produção
+        run: |
+          echo "Deploy em produção"
+          # Exemplo: conexão SSH
+          ssh -o StrictHostKeyChecking=no user@meu-servidor << 'EOF'
+=======
       - name: Configurar SSH
         run: |
           mkdir -p ~/.ssh
@@ -35,6 +42,7 @@ jobs:
         run: |
           echo "Deploy em produção"
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+>>>>>>> c85b426757f85cc63038549e04941b1117e5263d
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
             docker compose -f docker-compose.prod.yml up -d
           EOF
