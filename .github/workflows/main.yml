@@ -1,18 +1,15 @@
-name: CD - Deploy to Production
+name: CD - Deploy Production
 
 on:
   push:
     branches: ["main"]
 
-env:
-  DOCKERHUB_REPO: iscoolgpt
-
 jobs:
-  deploy:
+  deploy-production:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout código
+      - name: Checkout do código
         uses: actions/checkout@v4
 
       - name: Login no DockerHub
@@ -21,68 +18,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build e Push Docker
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+      - name: Build da imagem
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest .
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            # Navegar ou clonar repositório
-            if [ ! -d "IsCoolGPT" ]; then
-              git clone https://github.com/${{ github.repository }}.git IsCoolGPT
-            fi
-            cd IsCoolGPT
-            git pull origin main
-            
-            # Configurar .env
-            cat > .env << EOF
-            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
-            ENVIRONMENT=production
-            EOF
-            
-            # Pull nova imagem
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
-            
-            # Restart
-            sudo docker-compose down
-            sudo docker-compose up -d --build
-            
-            # Verificar
-            sudo docker-compose ps
-            
-            # Cleanup
-            sudo docker image prune -af
+      - name: Push da imagem
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
 
-      - name: Health Check
+      - name: Configurar SSH
         run: |
-          sleep 15
-          max_attempts=5
-          attempt=0
-          
-          while [ $attempt -lt $max_attempts ]; do
-            if curl -f http://${{ secrets.EC2_HOST }}:8000/health; then
-              echo "✅ Health check passou!"
-              exit 0
-            fi
-            attempt=$((attempt + 1))
-            echo "⏳ Tentativa $attempt/$max_attempts falhou, aguardando..."
-            sleep 10
-          done
-          
-          echo "❌ Health check falhou após $max_attempts tentativas"
-          exit 1
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Notificar Deploy
-        if: success()
+      - name: Deploy em produção
         run: |
-          echo "🎉 Deploy concluído com sucesso!"
-          echo "🌐 Frontend: http://${{ secrets.EC2_HOST }}"
-          echo "📚 API Docs: http://${{ secrets.EC2_HOST }}:8000/docs"
-          echo "💚 Health: http://${{ secrets.EC2_HOST }}:8000/health"
+          echo "Deploy em produção"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/meuapp:latest
+            docker compose -f docker-compose.prod.yml up -d
+          EOF
